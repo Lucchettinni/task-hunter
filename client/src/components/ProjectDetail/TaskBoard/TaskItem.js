@@ -1,159 +1,170 @@
 // client/src/components/ProjectDetail/TaskBoard/TaskItem.js
 import React, { useContext } from 'react';
-import { Paper, Typography, Box, Chip, IconButton, Menu, MenuItem, Tooltip, useTheme } from '@mui/material';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { Paper, Typography, Box, Chip, Button, useTheme, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import ReplayIcon from '@mui/icons-material/Replay';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AuthContext from '../../../contexts/AuthContext';
 import LowPriorityIcon from '@mui/icons-material/ArrowDownward';
 import MediumPriorityIcon from '@mui/icons-material/Remove';
 import HighPriorityIcon from '@mui/icons-material/ArrowUpward';
 
 const priorityMap = {
-    low: { label: 'Low', color: 'success', icon: <LowPriorityIcon fontSize="inherit" /> },
-    medium: { label: 'Medium', color: 'warning', icon: <MediumPriorityIcon fontSize="inherit" /> },
-    high: { label: 'High', color: 'error', icon: <HighPriorityIcon fontSize="inherit" /> },
+    low: { label: 'Low', color: 'success.main' },
+    medium: { label: 'Medium', color: 'warning.main' },
+    high: { label: 'High', color: 'error.main' },
 };
 
 const statusMap = {
-    'to do': { label: 'To Do', color: 'default' },
-    'in progress': { label: 'In Progress', color: 'info' },
-    'complete': { label: 'Complete', color: 'success' },
+    'to do': { label: 'To Do', color: 'grey.500' },
+    'in progress': { label: 'In Progress', color: 'info.main' },
+    'complete': { label: 'Complete', color: 'success.main' },
 };
 
 const TaskItem = ({ task, onStatusChange, onEdit, onDelete }) => {
     const { user } = useContext(AuthContext);
     const theme = useTheme();
-    const [anchorEl, setAnchorEl] = React.useState(null);
-    const open = Boolean(anchorEl);
-
+    
     const isAdmin = user.role === 'admin';
     const isComplete = task.status === 'complete';
 
-    const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
-    const handleMenuClose = () => setAnchorEl(null);
-
-    const handleEditClick = () => {
+    const handleEditClick = (e) => {
+        e.stopPropagation();
         onEdit(task);
-        handleMenuClose();
     };
 
-    const handleDeleteClick = () => {
+    const handleDeleteClick = (e) => {
+        e.stopPropagation();
         onDelete(task.id);
-        handleMenuClose();
     };
 
-    const handleStatusChangeClick = (newStatus) => {
+    const handleStatusChangeClick = (e, newStatus) => {
+        e.stopPropagation();
         onStatusChange(task.id, newStatus);
-        handleMenuClose();
     }
-
+    
     const renderProgressButton = () => {
         if (isComplete) {
             if (isAdmin) {
                 return (
-                    <Tooltip title="Re-open Task">
-                        <IconButton onClick={() => handleStatusChangeClick('to do')} size="small">
-                            <ReplayIcon />
-                        </IconButton>
-                    </Tooltip>
+                    <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<ReplayIcon />}
+                        onClick={(e) => handleStatusChangeClick(e, 'to do')}
+                        sx={{ backgroundColor: 'grey.500', '&:hover': { backgroundColor: 'grey.600' } }}
+                    >
+                        Re-open
+                    </Button>
                 );
             }
-            return null; // Regular users can't re-open tasks
+            return null;
         }
         if (task.status === 'to do') {
             return (
-                <Tooltip title="Start Task">
-                    <IconButton onClick={() => handleStatusChangeClick('in progress')} size="small" color="primary">
-                        <PlayCircleOutlineIcon />
-                    </IconButton>
-                </Tooltip>
+                <Button
+                    variant="contained"
+                    size="small"
+                    color="primary"
+                    startIcon={<PlayCircleOutlineIcon />}
+                    onClick={(e) => handleStatusChangeClick(e, 'in progress')}
+                >
+                    Start Task
+                </Button>
             );
         }
         if (task.status === 'in progress') {
             return (
-                <Tooltip title="Complete Task">
-                    <IconButton onClick={() => handleStatusChangeClick('complete')} size="small" color="success">
-                        <CheckCircleIcon />
-                    </IconButton>
-                </Tooltip>
+                <Button
+                    variant="contained"
+                    size="small"
+                    color="success"
+                    startIcon={<CheckCircleIcon />}
+                    onClick={(e) => handleStatusChangeClick(e, 'complete')}
+                >
+                    Complete
+                </Button>
             );
         }
         return null;
     };
-
-    const tabColor = isComplete ? theme.palette.success.main : theme.palette.primary.main;
-    const tabTextColor = isComplete ? theme.palette.success.contrastText : theme.palette.primary.contrastText;
+    
+    const topBarColor = theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[200];
+    const topBarContrastColor = theme.palette.getContrastText(topBarColor);
+    const buttonBackgroundColor = theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[300];
 
     return (
         <Paper elevation={2} sx={{ mb: 2, overflow: 'hidden' }}>
-            <Box
-                sx={{
-                    p: 1,
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    alignItems: 'center',
-                    gap: 1,
-                    backgroundColor: tabColor,
-                    color: tabTextColor
-                }}
-            >
-                <Chip
-                    icon={priorityMap[task.priority]?.icon}
-                    label={priorityMap[task.priority]?.label}
-                    size="small"
+            <Accordion sx={{ '&.Mui-expanded:before': { opacity: 1 } }}>
+                <AccordionSummary
+                    expandIcon={<ExpandMoreIcon sx={{ color: topBarContrastColor }} />}
                     sx={{
-                        color: tabTextColor,
-                        '.MuiChip-icon': { color: tabTextColor },
-                        border: `1px solid ${tabTextColor}`,
-                        backgroundColor: 'transparent'
+                        backgroundColor: topBarColor,
+                        color: topBarContrastColor,
+                        '& .MuiAccordionSummary-content': {
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            margin: '8px 0',
+                        }
                     }}
-                />
-                <Chip
-                    label={statusMap[task.status]?.label}
-                    size="small"
-                    sx={{
-                        color: tabTextColor,
-                        border: `1px solid ${tabTextColor}`,
-                        backgroundColor: 'transparent'
-                    }}
-                />
-                 {task.tags?.map(tag => (
-                    <Chip key={tag} label={tag} size="small" sx={{
-                        color: tabTextColor,
-                        border: `1px solid ${tabTextColor}`,
-                        backgroundColor: 'transparent'
-                    }}/>
-                ))}
-            </Box>
-            <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" component="div">{task.title}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                >
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                         <Typography variant="h6" component="div" sx={{ fontWeight: 500 }}>
+                            {task.title}
+                        </Typography>
+                        <Chip
+                            label={priorityMap[task.priority].label}
+                            size="small"
+                            sx={{ backgroundColor: priorityMap[task.priority].color, color: '#fff' }}
+                        />
+                        <Chip
+                            label={statusMap[task.status].label}
+                            size="small"
+                            sx={{ backgroundColor: statusMap[task.status].color, color: '#fff' }}
+                        />
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                        {renderProgressButton()}
+                        {isAdmin && (
+                            <>
+                                <Button
+                                    variant="contained"
+                                    size="small"
+                                    onClick={handleEditClick}
+                                    sx={{ 
+                                        backgroundColor: buttonBackgroundColor, 
+                                        color: topBarContrastColor,
+                                        '&:hover': { backgroundColor: theme.palette.grey[500] } 
+                                    }}
+                                >
+                                    Edit
+                                </Button>
+                                <Button
+                                    variant="contained"
+                                    size="small"
+                                    onClick={handleDeleteClick}
+                                    sx={{ 
+                                        backgroundColor: buttonBackgroundColor, 
+                                        color: theme.palette.error.light, 
+                                        '&:hover': { backgroundColor: theme.palette.error.dark }
+                                    }}
+                                >
+                                    Delete
+                                </Button>
+                            </>
+                        )}
+                    </Box>
+                </AccordionSummary>
+                <AccordionDetails sx={{ p: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                         {task.description || 'No description provided.'}
                     </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {renderProgressButton()}
-                    {isAdmin && (
-                        <>
-                            <Tooltip title="Edit Task">
-                                <IconButton onClick={() => onEdit(task)} size="small">
-                                    <EditIcon />
-                                </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete Task">
-                                <IconButton onClick={() => onDelete(task.id)} size="small">
-                                    <DeleteIcon color="error" />
-                                </IconButton>
-                            </Tooltip>
-                        </>
-                    )}
-                </Box>
-            </Box>
+                </AccordionDetails>
+            </Accordion>
         </Paper>
     );
 };

@@ -97,6 +97,8 @@ const ProfileModal = ({ open, onClose }) => {
             if (data.token) {
                 login(data.token); // Re-login with the new token to update context
             }
+            setThemeName(selectedTheme);
+            setPrimaryColor(selectedColor);
             setSuccess('Theme updated successfully!');
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to update theme.');
@@ -152,18 +154,26 @@ const ProfileModal = ({ open, onClose }) => {
                                 <ToggleButton value="dark">Dark</ToggleButton>
                             </ToggleButtonGroup>
                          </Box>
-                         <TextField
-                            fullWidth margin="normal" label="Primary Color (Hex)"
-                            value={selectedColor} onChange={(e) => setSelectedColor(e.target.value)}
-                            helperText="e.g., #90caf9 or #1976d2"
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <Box sx={{ width: 24, height: 24, backgroundColor: selectedColor, border: '1px solid grey' }} />
-                                    </InputAdornment>
-                                )
-                            }}
-                         />
+                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2, mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                            <Typography variant="subtitle1" sx={{flexShrink: 0}}>Primary Color</Typography>
+                            <Box sx={{width: '100%', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2}}>
+                                <Typography variant="body2" color="text.secondary">{selectedColor}</Typography>
+                                <input
+                                    type="color"
+                                    value={selectedColor}
+                                    onChange={(e) => setSelectedColor(e.target.value)}
+                                    style={{
+                                        width: 40,
+                                        height: 40,
+                                        border: 'none',
+                                        padding: 0,
+                                        background: 'none',
+                                        cursor: 'pointer'
+                                    }}
+                                />
+                            </Box>
+                        </Box>
+
                          <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>Save Theme</Button>
                     </Box>
                 )}
