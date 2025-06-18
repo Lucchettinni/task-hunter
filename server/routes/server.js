@@ -1,0 +1,3 @@
+// ... in server/server.js
+app.use('/api/chat', require('./routes/chat'));
+// ...
