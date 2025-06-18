@@ -5,10 +5,10 @@ export const lightTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#1976d2', // A nice blue
+      main: '#1976d2', // Default light primary
     },
     secondary: {
-      main: '#dc004e', // A pinkish red
+      main: '#dc004e',
     },
     background: {
       default: '#f4f6f8',
@@ -21,10 +21,10 @@ export const darkTheme = createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#90caf9', // A lighter blue for dark mode
+      main: '#90caf9', // Default dark primary
     },
     secondary: {
-      main: '#f48fb1', // A lighter pink for dark mode
+      main: '#f48fb1',
     },
     background: {
       default: '#121212',
@@ -32,23 +32,3 @@ export const darkTheme = createTheme({
     },
   },
 });
-
-export const cyberpunkTheme = createTheme({
-    palette: {
-      mode: 'dark',
-      primary: {
-        main: '#00ffff', // Cyan
-      },
-      secondary: {
-        main: '#ff00ff', // Magenta
-      },
-      background: {
-        default: '#0d0221', // Deep purple
-        paper: '#241b4a',
-      },
-      text: {
-        primary: '#00ffff',
-        secondary: '#fdfdfd',
-      }
-    },
-  });

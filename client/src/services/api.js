@@ -1,12 +1,12 @@
 // src/services/api.js
 import axios from 'axios';
 
-const api = axios.create({
+const axiosInstance = axios.create({
   baseURL: 'http://localhost:5000/api', // Your backend URL
 });
 
 // Interceptor to ADD the token to every request
-api.interceptors.request.use((config) => {
+axiosInstance.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -17,8 +17,8 @@ api.interceptors.request.use((config) => {
 });
 
 
-// NEW: Interceptor to HANDLE 401 errors on responses
-api.interceptors.response.use(
+// Interceptor to HANDLE 401 errors on responses
+axiosInstance.interceptors.response.use(
     (response) => {
         // If the request was successful, just return the response
         return response;
@@ -32,8 +32,6 @@ api.interceptors.response.use(
             localStorage.removeItem('token');
 
             // Redirect the user to the login page.
-            // Using window.location.href is a simple way to force a full page reload 
-            // and ensure all state is cleared.
             window.location.href = '/login';
         }
 
@@ -41,6 +39,13 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
+const api = {
+    ...axiosInstance, // Keep original axios methods
+    updateUserProfile: (data) => axiosInstance.put('/users/profile', data),
+    updateUserPassword: (data) => axiosInstance.put('/users/password', data),
+    updateUserTheme: (data) => axiosInstance.put('/users/theme', data),
+};
 
 
 export default api;

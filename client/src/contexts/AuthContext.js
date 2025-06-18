@@ -1,6 +1,7 @@
 // client/src/contexts/AuthContext.js
 import React, { createContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import api from '../services/api'; // Import api to use the interceptor
 
 const AuthContext = createContext();
 
@@ -34,17 +35,22 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  // New function to update user state from other parts of the app
+  // Function to update user state from other parts of the app
   const updateUser = (updatedFields) => {
     setUser(prevUser => {
+      if (!prevUser) return null;
       const newUser = { ...prevUser, ...updatedFields };
-      
-      // Also update the token in localStorage to reflect the change on next reload
+
+      // To keep the JWT in sync with the user state after an update,
+      // it's best practice to get a new token from the server.
+      // For now, we update the state locally for immediate UI feedback.
+      // A robust solution would involve an endpoint that returns a new token on profile update.
       const token = localStorage.getItem('token');
       if (token) {
-        // We can't change the existing token, but for a better user experience on refresh,
-        // it's best to re-fetch user data or get a new token. For now, this state update is enough for a live session.
-        // A more robust solution might involve a new JWT from the server on theme change.
+        const decodedToken = jwtDecode(token);
+        const newPayload = { ...decodedToken, user: newUser };
+        // This is a simplified example; re-signing a token should happen on the server.
+        // The local user state update is sufficient for the current session.
       }
       
       return newUser;
@@ -52,7 +58,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, updateUser }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout, loading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

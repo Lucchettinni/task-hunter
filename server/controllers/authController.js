@@ -24,9 +24,16 @@ const signup = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create user (role is 'user' by default)
-        const [result] = await db.query('INSERT INTO users (username, password) VALUES (?, ?)', [username, hashedPassword]);
-        const newUser = { id: result.insertId, username, role: 'user' };
+        // Create user with default name as username
+        const [result] = await db.query('INSERT INTO users (username, password, name) VALUES (?, ?, ?)', [username, hashedPassword, username]);
+        const newUser = { 
+            id: result.insertId, 
+            username, 
+            role: 'user', 
+            name: username,
+            theme: 'dark', // default theme
+            primary_color: '#90caf9' // default color
+        };
         
         // Create and sign a JWT
         const token = jwt.sign({ user: newUser }, 'your_jwt_secret', { expiresIn: '1h' });
@@ -63,8 +70,11 @@ const login = async (req, res) => {
         const userPayload = {
             id: user.id,
             username: user.username,
+            name: user.name || user.username, // Fallback to username if name is null
+            profile_image_url: user.profile_image_url,
             role: user.role,
-            theme: user.theme // The theme is correctly included here
+            theme: user.theme,
+            primary_color: user.primary_color
         };
         
         // Create and sign a JWT

@@ -1,84 +1,39 @@
 // client/src/components/Layout/Navbar.js
-import React, { useContext, useState } from 'react';
-import { AppBar, Toolbar, Typography, Button, Box, IconButton, Menu, MenuItem } from '@mui/material';
+import React, { useContext } from 'react';
+import { AppBar, Toolbar, Typography, Button, Box, IconButton, Avatar, Tooltip } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthContext from '../../contexts/AuthContext';
-import { useThemeContext } from '../../contexts/ThemeProvider';
 import SettingsIcon from '@mui/icons-material/Settings';
-import api from '../../services/api';
 
-const Navbar = () => {
-    // Bring in the new updateUser function from the context
-    const { user, logout, updateUser } = useContext(AuthContext); 
-    const { setThemeName } = useThemeContext();
+const Navbar = ({ onOpenProfile }) => {
+    const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
-    const [anchorEl, setAnchorEl] = useState(null);
-    const open = Boolean(anchorEl);
-
-    const handleMenu = (event) => {
-        setAnchorEl(event.currentTarget);
-    };
-
-    const handleClose = () => {
-        setAnchorEl(null);
-    };
 
     const handleLogout = () => {
         logout();
-        handleClose();
         navigate('/login');
-    };
-
-    const handleThemeChange = async (theme) => {
-        setThemeName(theme); // Update theme immediately for responsiveness
-        handleClose();
-        try {
-            // Persist theme preference to the backend
-            await api.put('/users/theme', { theme });
-            // Update the user state in the AuthContext
-            updateUser({ theme: theme }); 
-        } catch (error) {
-            console.error("Failed to save theme", error);
-            // Optional: revert theme if API call fails
-        }
     };
 
     return (
         <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
             <Toolbar>
                 <Typography variant="h6" component={Link} to="/" sx={{ flexGrow: 1, textDecoration: 'none', color: 'inherit' }}>
-                    GameDev Tracker
+                    Task Hunter
                 </Typography>
 
                 {user ? (
-                    <>
-                        <Typography>Hi, {user.username}</Typography>
-                        <IconButton
-                            size="large"
-                            aria-label="account of current user"
-                            aria-controls="menu-appbar"
-                            aria-haspopup="true"
-                            onClick={handleMenu}
-                            color="inherit"
-                        >
-                            <SettingsIcon />
-                        </IconButton>
-                        <Menu
-                            id="menu-appbar"
-                            anchorEl={anchorEl}
-                            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                            keepMounted
-                            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                            open={open}
-                            onClose={handleClose}
-                        >
-                            <MenuItem disabled>Change Theme</MenuItem>
-                            <MenuItem onClick={() => handleThemeChange('light')}>Light</MenuItem>
-                            <MenuItem onClick={() => handleThemeChange('dark')}>Dark</MenuItem>
-                            <MenuItem onClick={() => handleThemeChange('cyberpunk')}>Cyberpunk</MenuItem>
-                            <MenuItem onClick={handleLogout}>Logout</MenuItem>
-                        </Menu>
-                    </>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar src={user.profile_image_url} sx={{ width: 32, height: 32 }}>
+                            {user.name ? user.name.charAt(0).toUpperCase() : ''}
+                        </Avatar>
+                        <Typography sx={{ display: { xs: 'none', sm: 'block' } }}>{user.name}</Typography>
+                        <Tooltip title="Settings">
+                            <IconButton onClick={onOpenProfile} color="inherit">
+                                <SettingsIcon />
+                            </IconButton>
+                        </Tooltip>
+                        <Button color="inherit" onClick={handleLogout}>Logout</Button>
+                    </Box>
                 ) : (
                     <Button color="inherit" component={Link} to="/login">Login</Button>
                 )}

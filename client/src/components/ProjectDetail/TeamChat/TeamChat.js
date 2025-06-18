@@ -1,6 +1,6 @@
 // client/src/components/ProjectDetail/TeamChat/TeamChat.js
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { Paper, Box, CircularProgress, Alert, Grid } from '@mui/material';
+import { Paper, Box, CircularProgress, Alert, Grid, IconButton, Collapse, Tooltip } from '@mui/material';
 import api from '../../../services/api';
 import socket from '../../../services/socket';
 import AuthContext from '../../../contexts/AuthContext';
@@ -8,6 +8,9 @@ import ChatWindow from './ChatWindow';
 import ChannelList from './ChannelList';
 import UserList from './UserList';
 import ChannelModal from './ChannelModal';
+import PeopleIcon from '@mui/icons-material/People';
+import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
+
 
 const TeamChat = ({ projectId }) => {
     const [channels, setChannels] = useState([]);
@@ -18,9 +21,9 @@ const TeamChat = ({ projectId }) => {
     const [error, setError] = useState('');
     const { user } = useContext(AuthContext);
 
-    // State for channel modal
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingChannel, setEditingChannel] = useState(null);
+    const [isUserListOpen, setIsUserListOpen] = useState(true);
 
     const fetchChannels = useCallback(async () => {
         try {
@@ -86,7 +89,6 @@ const TeamChat = ({ projectId }) => {
         });
     };
 
-    // --- Channel Modal Handlers ---
     const handleOpenCreateModal = () => {
         setEditingChannel(null);
         setIsModalOpen(true);
@@ -121,7 +123,6 @@ const TeamChat = ({ projectId }) => {
         if (window.confirm("Are you sure you want to delete this channel? All messages within it will be permanently lost.")) {
             try {
                 await api.delete(`/chat/channels/${channelId}`);
-                // If the deleted channel was the current one, reset it.
                 if (currentChannel?.id === channelId) {
                     setCurrentChannel(null);
                 }
@@ -135,38 +136,47 @@ const TeamChat = ({ projectId }) => {
 
     return (
         <Paper elevation={3} sx={{ height: 'calc(100vh - 220px)', width: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
-            <Grid container sx={{height: '100%'}}>
-                <Grid item xs={12} sm={3} md={2.5} sx={{ borderRight: '1px solid', borderColor: 'divider', height: '100%' }}>
-                    <ChannelList
-                        channels={channels}
-                        currentChannel={currentChannel}
-                        onSelectChannel={setCurrentChannel}
-                        onAdd={handleOpenCreateModal}
-                        onEdit={handleOpenEditModal}
-                        onDelete={handleDeleteChannel}
+            <Box sx={{ borderRight: 1, borderColor: 'divider', width: { xs: '200px', sm: '240px', md: '280px' } }}>
+                <ChannelList
+                    channels={channels}
+                    currentChannel={currentChannel}
+                    onSelectChannel={setCurrentChannel}
+                    onAdd={handleOpenCreateModal}
+                    onEdit={handleOpenEditModal}
+                    onDelete={handleDeleteChannel}
+                />
+            </Box>
+            
+            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                 {currentChannel ? (
+                    <ChatWindow
+                        key={currentChannel.id}
+                        channel={currentChannel}
+                        messages={messages}
+                        loading={loading}
+                        onSendMessage={handleSendMessage}
+                        onToggleUserList={() => setIsUserListOpen(!isUserListOpen)}
+                        isUserListOpen={isUserListOpen}
                     />
-                </Grid>
-                
-                <Grid item xs={12} sm={6} md={7} sx={{ height: '100%' }}>
-                     {currentChannel ? (
-                        <ChatWindow
-                            key={currentChannel.id}
-                            channel={currentChannel}
-                            messages={messages}
-                            loading={loading}
-                            onSendMessage={handleSendMessage}
-                        />
-                    ) : (
-                        <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                            {loading ? <CircularProgress /> : <Alert severity='info'>Select a channel to start chatting, or an admin can create one.</Alert>}
-                        </Box>
-                    )}
-                </Grid>
+                ) : (
+                    <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                        {loading ? <CircularProgress /> : <Alert severity='info'>Select a channel to start chatting, or an admin can create one.</Alert>}
+                    </Box>
+                )}
+            </Box>
 
-                <Grid item xs={12} sm={3} md={2.5} sx={{ borderLeft: '1px solid', borderColor: 'divider', height: '100%', display: { xs: 'none', sm: 'block' } }}>
+            <Collapse in={isUserListOpen} orientation="horizontal" timeout="auto">
+                <Box sx={{ 
+                    borderLeft: 1, 
+                    borderColor: 'divider', 
+                    width: '280px', 
+                    maxWidth: '280px', 
+                    height: '100%',
+                    display: { xs: 'none', md: 'block' }
+                }}>
                     <UserList users={onlineUsers} />
-                </Grid>
-            </Grid>
+                </Box>
+            </Collapse>
             
             <ChannelModal 
                 open={isModalOpen}

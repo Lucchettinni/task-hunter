@@ -1,22 +1,27 @@
 // src/App.js
-import React from 'react';
+import React, { useState, useContext } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { CssBaseline } from '@mui/material';
+import { CssBaseline, Box } from '@mui/material';
 import { CustomThemeProvider } from './contexts/ThemeProvider';
+import AuthContext from './contexts/AuthContext';
+
 import Login from './components/Auth/Login';
 import SignUp from './components/Auth/SignUp';
 import ProjectList from './components/Projects/ProjectList';
 import ProjectView from './components/ProjectDetail/ProjectView';
 import Navbar from './components/Layout/Navbar';
 import PrivateRoute from './components/Layout/PrivateRoute';
+import ProfileModal from './components/Layout/ProfileModal';
 
-function App() {
+function AppContent() {
+  const { user } = useContext(AuthContext);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+
   return (
-    // We wrap the app in the ThemeProvider AFTER the AuthProvider
-    <CustomThemeProvider>
-      <CssBaseline /> {/* Resets CSS for cross-browser consistency */}
-      <Navbar />
-      <main style={{ paddingTop: '64px' }}> {/* Offset content below Navbar */}
+    <>
+      <Navbar onOpenProfile={() => setProfileModalOpen(true)} />
+      {user && <ProfileModal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} />}
+      <Box component="main" sx={{ pt: '64px', height: 'calc(100vh - 64px)' }}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
@@ -24,13 +29,21 @@ function App() {
           {/* Protected Routes */}
           <Route path="/" element={<PrivateRoute />}>
             <Route path="/" element={<ProjectList />} />
-          </Route>
-          <Route path="/project/:projectId" element={<PrivateRoute />}>
-             <Route path="/project/:projectId" element={<ProjectView />} />
+            <Route path="/project/:projectId" element={<ProjectView />} />
           </Route>
 
         </Routes>
-      </main>
+      </Box>
+    </>
+  );
+}
+
+
+function App() {
+  return (
+    <CustomThemeProvider>
+      <CssBaseline />
+      <AppContent />
     </CustomThemeProvider>
   );
 }
