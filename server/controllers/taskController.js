@@ -1,4 +1,3 @@
-// lucchettinni/task-hunter/task-hunter-98dbd00d8848520e1f723ad482725bd869bc42bd/server/controllers/taskController.js
 // server/controllers/taskController.js
 const db = require('../db');
 
@@ -65,52 +64,48 @@ exports.createTask = async (req, res) => {
 exports.updateTask = async (req, res) => {
     const taskId = req.params.id;
     const { role } = req.user;
-    const { title, description, status, priority, tags } = req.body;
+    const newValues = req.body;
 
     try {
+        // 1. Fetch the existing task from the database
         const [tasks] = await db.query('SELECT * FROM tasks WHERE id = ?', [taskId]);
         if (tasks.length === 0) {
             return res.status(404).json({ msg: 'Task not found' });
         }
+        const existingTask = tasks[0];
 
-        // Non-admins can only update status. They cannot update any other field.
-        if (role !== 'admin' && (title !== undefined || description !== undefined || priority !== undefined || tags !== undefined)) {
-             return res.status(403).json({ message: 'Not authorized to edit task details' });
-        }
-
-        const fieldsToUpdate = [];
-        const values = [];
-
-        if (title !== undefined) {
-            fieldsToUpdate.push('title = ?');
-            values.push(title);
-        }
-        if (description !== undefined) {
-            fieldsToUpdate.push('description = ?');
-            values.push(description);
-        }
-        if (status !== undefined) {
-            fieldsToUpdate.push('status = ?');
-            values.push(status);
-        }
-        if (priority !== undefined) {
-            fieldsToUpdate.push('priority = ?');
-            values.push(priority);
-        }
-        if (tags !== undefined) {
-            const tagsJson = JSON.stringify(tags || []);
-            fieldsToUpdate.push('tags = ?');
-            values.push(tagsJson);
-        }
-
-        if (fieldsToUpdate.length === 0) {
-            return res.json({ message: 'No fields to update.' });
+        // 2. Authorization: Non-admins can only update the 'status' field.
+        if (role !== 'admin') {
+            const allowedKeys = ['status'];
+            const receivedKeys = Object.keys(newValues);
+            if (receivedKeys.some(key => !allowedKeys.includes(key))) {
+                 return res.status(403).json({ message: 'Not authorized to edit task details.' });
+            }
         }
         
-        values.push(taskId);
-        const sql = `UPDATE tasks SET ${fieldsToUpdate.join(', ')} WHERE id = ?`;
+        // 3. Merge existing data with the new values to prevent nulling fields
+        const updatedTaskData = { ...existingTask, ...newValues };
 
-        await db.query(sql, values);
+        // 4. Ensure tags are stored as a JSON string
+        const tagsJson = JSON.stringify(updatedTaskData.tags || []);
+
+        // 5. Build and execute the final UPDATE query with all fields
+        const sql = `UPDATE tasks SET 
+            title = ?, 
+            description = ?, 
+            status = ?, 
+            priority = ?, 
+            tags = ? 
+          WHERE id = ?`;
+        
+        await db.query(sql, [
+            updatedTaskData.title,
+            updatedTaskData.description,
+            updatedTaskData.status,
+            updatedTaskData.priority,
+            tagsJson,
+            taskId
+        ]);
         
         res.json({ message: 'Task updated successfully' });
     } catch (err) {

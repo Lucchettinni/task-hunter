@@ -1,4 +1,3 @@
-// lucchettinni/task-hunter/task-hunter-98dbd00d8848520e1f723ad482725bd869bc42bd/client/src/components/ProjectDetail/TaskBoard/TaskItem.js
 // client/src/components/ProjectDetail/TaskBoard/TaskItem.js
 import React, { useContext } from 'react';
 import { Paper, Typography, Box, Chip, Button, useTheme, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
@@ -9,9 +8,6 @@ import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import ReplayIcon from '@mui/icons-material/Replay';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AuthContext from '../../../contexts/AuthContext';
-import LowPriorityIcon from '@mui/icons-material/ArrowDownward';
-import MediumPriorityIcon from '@mui/icons-material/Remove';
-import HighPriorityIcon from '@mui/icons-material/ArrowUpward';
 
 const priorityMap = {
     low: { label: 'Low', color: 'success.main' },
@@ -105,36 +101,57 @@ const TaskItem = ({ task, onStatusChange, onEdit, onDelete }) => {
                     sx={{
                         backgroundColor: topBarColor,
                         color: topBarContrastColor,
-                        py: 1.5, // Consistent vertical padding
+                        padding: '12px 16px', // **FIX 2: Explicit and consistent padding**
+                        minHeight: '64px', // **FIX 2: Enforce a minimum height**
+                        '&.Mui-expanded': {
+                            minHeight: '64px',
+                        },
                         '& .MuiAccordionSummary-content': {
+                            margin: '0 !important', // **FIX 2: Force margin to be zero**
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            margin: 0, // Remove margin from content to rely on parent padding
+                            gap: 2,
                         }
                     }}
                 >
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-                         <Typography variant="h6" component="div" sx={{ fontWeight: 500 }}>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flex: 1, minWidth: 0 }}>
+                        <Typography variant="h6" component="div" sx={{ fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {task.title}
                         </Typography>
                         <Chip
                             label={priorityMap[task.priority].label}
                             size="small"
-                            sx={{ backgroundColor: priorityMap[task.priority].color, color: '#fff' }}
+                            sx={{ backgroundColor: priorityMap[task.priority].color, color: '#fff', flexShrink: 0 }}
                         />
                         <Chip
                             label={statusMap[task.status].label}
                             size="small"
-                            sx={{ backgroundColor: statusMap[task.status].color, color: '#fff' }}
+                            sx={{ backgroundColor: statusMap[task.status].color, color: '#fff', flexShrink: 0 }}
                         />
-                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                            {task.tags && task.tags.map(tag => (
-                                <Chip key={tag} label={tag} size="small" />
-                            ))}
+                         <Box sx={{ 
+                            display: 'flex', 
+                            gap: 0.5, 
+                            flexShrink: 1,
+                            minWidth: 50,
+                            overflow: 'hidden',
+                         }}>
+                             <Box sx={{
+                                display: 'flex',
+                                gap: 0.5,
+                                overflowX: 'auto', // **FIX 3: Enable horizontal scroll**
+                                flexWrap: 'nowrap', // **FIX 3: Prevent wrapping**
+                                // Simple scrollbar styling
+                                '&::-webkit-scrollbar': { height: '4px' },
+                                '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: '2px' }
+                             }}>
+                                {task.tags && task.tags.map(tag => (
+                                    <Chip key={tag} label={tag} size="small" />
+                                ))}
+                            </Box>
                         </Box>
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                         {renderProgressButton()}
                         {isAdmin && (
                             <>
