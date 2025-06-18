@@ -6,7 +6,7 @@ const db = require('../db');
 // @access  Private
 exports.getChannels = async (req, res) => {
     try {
-        const [channels] = await db.query('SELECT * FROM channels WHERE project_id = ?', [req.params.projectId]);
+        const [channels] = await db.query('SELECT * FROM channels WHERE project_id = ? ORDER BY name ASC', [req.params.projectId]);
         res.json(channels);
     } catch (err) {
         console.error(err.message);
@@ -19,10 +19,13 @@ exports.getChannels = async (req, res) => {
 // @access  Private (Admin only)
 exports.createChannel = async (req, res) => {
     const { project_id, name } = req.body;
+    if (!name || name.trim().length === 0) {
+        return res.status(400).json({ message: 'Channel name cannot be empty.' });
+    }
     try {
         const [result] = await db.query(
             'INSERT INTO channels (project_id, name) VALUES (?, ?)',
-            [project_id, name]
+            [project_id, name.trim()]
         );
         res.status(201).json({ id: result.insertId, project_id, name });
     } catch (err) {
@@ -30,6 +33,41 @@ exports.createChannel = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+// @desc    Update a channel's name
+// @route   PUT /api/chat/channels/:channelId
+// @access  Private (Admin only)
+exports.updateChannel = async (req, res) => {
+    const { name } = req.body;
+    const { channelId } = req.params;
+     if (!name || name.trim().length === 0) {
+        return res.status(400).json({ message: 'Channel name cannot be empty.' });
+    }
+    try {
+        await db.query('UPDATE channels SET name = ? WHERE id = ?', [name.trim(), channelId]);
+        res.json({ message: 'Channel updated successfully.' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Delete a channel
+// @route   DELETE /api/chat/channels/:channelId
+// @access  Private (Admin only)
+exports.deleteChannel = async (req, res) => {
+    const { channelId } = req.params;
+    try {
+        // You might want to also delete all messages in this channel
+        await db.query('DELETE FROM chat_messages WHERE channel_id = ?', [channelId]);
+        await db.query('DELETE FROM channels WHERE id = ?', [channelId]);
+        res.json({ message: 'Channel deleted successfully.' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
 
 // @desc    Get all messages for a channel
 // @route   GET /api/chat/messages/:channelId

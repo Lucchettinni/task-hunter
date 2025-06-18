@@ -1,4 +1,4 @@
-// src/components/Layout/Navbar.js
+// client/src/components/Layout/Navbar.js
 import React, { useContext, useState } from 'react';
 import { AppBar, Toolbar, Typography, Button, Box, IconButton, Menu, MenuItem } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
@@ -8,7 +8,8 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import api from '../../services/api';
 
 const Navbar = () => {
-    const { user, logout } = useContext(AuthContext);
+    // Bring in the new updateUser function from the context
+    const { user, logout, updateUser } = useContext(AuthContext); 
     const { setThemeName } = useThemeContext();
     const navigate = useNavigate();
     const [anchorEl, setAnchorEl] = useState(null);
@@ -29,16 +30,18 @@ const Navbar = () => {
     };
 
     const handleThemeChange = async (theme) => {
-        setThemeName(theme);
-        // Persist theme preference to the backend
+        setThemeName(theme); // Update theme immediately for responsiveness
+        handleClose();
         try {
+            // Persist theme preference to the backend
             await api.put('/users/theme', { theme });
+            // Update the user state in the AuthContext
+            updateUser({ theme: theme }); 
         } catch (error) {
             console.error("Failed to save theme", error);
+            // Optional: revert theme if API call fails
         }
-        handleClose();
     };
-
 
     return (
         <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>

@@ -1,25 +1,24 @@
-// src/components/ProjectDetail/TaskBoard/TaskCard.js
+// client/src/components/ProjectDetail/TaskBoard/TaskCard.js
 import React, { useContext } from 'react';
-import { Card, CardContent, Typography, Box, Chip, IconButton, Menu, MenuItem } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { Card, CardContent, Typography, Box, Chip, IconButton, Menu, MenuItem, Tooltip } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import AuthContext from '../../../contexts/AuthContext';
+import LowPriorityIcon from '@mui/icons-material/ArrowDownward';
+import MediumPriorityIcon from '@mui/icons-material/Remove';
+import HighPriorityIcon from '@mui/icons-material/ArrowUpward';
 
-const priorityColors = {
-    low: 'success',
-    medium: 'warning',
-    high: 'error',
+const priorityMap = {
+    low: { label: 'Low', color: 'success', icon: <LowPriorityIcon fontSize="small"/> },
+    medium: { label: 'Medium', color: 'warning', icon: <MediumPriorityIcon fontSize="small"/> },
+    high: { label: 'High', color: 'error', icon: <HighPriorityIcon fontSize="small"/> },
 };
-
-const StyledCard = styled(Card)(({ theme }) => ({
-    marginBottom: theme.spacing(2),
-    backgroundColor: theme.palette.background.paper,
-}));
 
 const TaskCard = ({ task, onStatusChange, onEdit, onDelete }) => {
     const { user } = useContext(AuthContext);
     const [anchorEl, setAnchorEl] = React.useState(null);
     const open = Boolean(anchorEl);
+
+    const currentPriority = priorityMap[task.priority] || priorityMap.medium;
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -34,7 +33,6 @@ const TaskCard = ({ task, onStatusChange, onEdit, onDelete }) => {
         handleClose();
     }
     
-    // Users can move tasks, admins can do more
     const canMoveTo = (status) => {
         if (task.status !== status) {
             onStatusChange(task.id, status)
@@ -43,39 +41,41 @@ const TaskCard = ({ task, onStatusChange, onEdit, onDelete }) => {
     }
 
     return (
-        <StyledCard>
+        <Card sx={{ mb: 2, '&:hover': { boxShadow: 4 } }}>
             <CardContent>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="h6" component="div">
+                <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                    <Typography variant="h6" component="div" sx={{flexGrow: 1, pr: 1, wordBreak: 'break-word'}}>
                         {task.title}
                     </Typography>
-                     <IconButton size="small" onClick={handleClick}><MoreVertIcon /></IconButton>
-                     <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
-                        {user.role === 'admin' && <MenuItem onClick={() => handleMenuClick('edit')}>Edit</MenuItem>}
-                        {user.role === 'admin' && <MenuItem onClick={() => handleMenuClick('delete')}>Delete</MenuItem>}
-                         {user.role === 'admin' && task.status === 'complete' && <MenuItem onClick={() => canMoveTo('to do')}>Re-open Task</MenuItem>}
+                    <IconButton size="small" onClick={handleClick}><MoreVertIcon /></IconButton>
+                    <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
+                        {user.role === 'admin' && <MenuItem onClick={() => handleMenuClick('edit')}>Edit Details</MenuItem>}
                         <MenuItem disabled>Move to...</MenuItem>
                         <MenuItem onClick={() => canMoveTo('to do')} disabled={task.status === 'to do'}>To Do</MenuItem>
                         <MenuItem onClick={() => canMoveTo('in progress')} disabled={task.status === 'in progress'}>In Progress</MenuItem>
                         <MenuItem onClick={() => canMoveTo('complete')} disabled={task.status === 'complete'}>Complete</MenuItem>
+                        {user.role === 'admin' && <MenuItem onClick={() => handleMenuClick('delete')} sx={{color: 'error.main'}}>Delete Task</MenuItem>}
                     </Menu>
                 </Box>
-                <Typography sx={{ mt: 1.5 }} color="text.secondary">
+                <Typography sx={{ mt: 1, mb: 2, minHeight: '40px' }} color="text.secondary">
                     {task.description}
                 </Typography>
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Chip
-                        label={task.priority}
-                        color={priorityColors[task.priority]}
+                        icon={currentPriority.icon}
+                        label={currentPriority.label}
+                        color={currentPriority.color}
                         size="small"
-                        sx={{ mr: 1 }}
+                        variant="outlined"
                     />
-                    {task.tags && task.tags.map(tag => (
-                        <Chip key={tag} label={tag} size="small" sx={{ mr: 1 }} />
-                    ))}
+                     <Box>
+                        {task.tags && task.tags.map(tag => (
+                            <Chip key={tag} label={tag} size="small" sx={{ ml: 0.5 }} />
+                        ))}
+                    </Box>
                 </Box>
             </CardContent>
-        </StyledCard>
+        </Card>
     );
 };
 

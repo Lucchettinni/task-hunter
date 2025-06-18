@@ -1,4 +1,4 @@
-// src/contexts/AuthContext.js
+// client/src/contexts/AuthContext.js
 import React, { createContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
@@ -11,8 +11,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      const decodedUser = jwtDecode(token).user;
-      setUser(decodedUser);
+      try {
+        const decodedUser = jwtDecode(token).user;
+        setUser(decodedUser);
+      } catch (error) {
+        // If token is invalid, remove it
+        console.error("Invalid token found in storage.", error);
+        localStorage.removeItem('token');
+      }
     }
     setLoading(false);
   }, []);
@@ -28,8 +34,25 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // New function to update user state from other parts of the app
+  const updateUser = (updatedFields) => {
+    setUser(prevUser => {
+      const newUser = { ...prevUser, ...updatedFields };
+      
+      // Also update the token in localStorage to reflect the change on next reload
+      const token = localStorage.getItem('token');
+      if (token) {
+        // We can't change the existing token, but for a better user experience on refresh,
+        // it's best to re-fetch user data or get a new token. For now, this state update is enough for a live session.
+        // A more robust solution might involve a new JWT from the server on theme change.
+      }
+      
+      return newUser;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { getChannels, createChannel, getMessages } = require('../controllers/chatController');
+const { getChannels, createChannel, getMessages, updateChannel, deleteChannel } = require('../controllers/chatController');
 const { protect, isAdmin } = require('../middleware/authMiddleware');
 
 // --- Multer Configuration ---
@@ -41,8 +41,13 @@ router.post('/upload', (req, res) => {
     });
 });
 
+// Channel Routes
 router.get('/channels/:projectId', getChannels);
 router.post('/channels', isAdmin, createChannel);
+router.put('/channels/:channelId', isAdmin, updateChannel); // New route
+router.delete('/channels/:channelId', isAdmin, deleteChannel); // New route
+
+// Message Routes
 router.get('/messages/:channelId', getMessages);
 
 module.exports = router;

@@ -64,7 +64,7 @@ const login = async (req, res) => {
             id: user.id,
             username: user.username,
             role: user.role,
-            theme: user.theme
+            theme: user.theme // The theme is correctly included here
         };
         
         // Create and sign a JWT

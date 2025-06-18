@@ -1,30 +1,60 @@
-// src/components/ProjectDetail/TeamChat/ChannelList.js
+// client/src/components/ProjectDetail/TeamChat/ChannelList.js
 import React, { useState, useContext } from 'react';
-import { List, ListItem, ListItemButton, ListItemText, Typography, TextField, Button, Box } from '@mui/material';
+import { List, ListItem, ListItemButton, ListItemText, Typography, Button, Box, IconButton, Menu, MenuItem, Divider, Tooltip } from '@mui/material';
 import AuthContext from '../../../contexts/AuthContext';
-import api from '../../../services/api';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import AddIcon from '@mui/icons-material/Add';
 
-const ChannelList = ({ channels, currentChannel, onSelectChannel, projectId, onChannelCreated }) => {
+const ChannelList = ({ channels, currentChannel, onSelectChannel, onAdd, onEdit, onDelete }) => {
     const { user } = useContext(AuthContext);
-    const [newChannelName, setNewChannelName] = useState('');
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [selectedChannelForMenu, setSelectedChannelForMenu] = useState(null);
 
-    const handleCreateChannel = async () => {
-        if (newChannelName.trim() === '') return;
-        try {
-            await api.post('/chat/channels', { project_id: projectId, name: newChannelName });
-            setNewChannelName('');
-            onChannelCreated(); // Tell the parent to refetch channels
-        } catch (error) {
-            console.error('Failed to create channel', error);
-        }
+    const handleMenuOpen = (event, channel) => {
+        event.stopPropagation();
+        setAnchorEl(event.currentTarget);
+        setSelectedChannelForMenu(channel);
+    };
+
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+        setSelectedChannelForMenu(null);
+    };
+
+    const handleEdit = () => {
+        onEdit(selectedChannelForMenu);
+        handleMenuClose();
+    };
+
+    const handleDelete = () => {
+        onDelete(selectedChannelForMenu.id);
+        handleMenuClose();
     };
     
     return (
         <Box sx={{p: 1, height: '100%', display: 'flex', flexDirection: 'column'}}>
-            <Typography variant="h6" sx={{p: 1}}>Channels</Typography>
-            <List sx={{flexGrow: 1}}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1 }}>
+                <Typography variant="h6">Channels</Typography>
+                {user.role === 'admin' && (
+                    <Tooltip title="Add New Channel">
+                        <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={onAdd}>
+                            New
+                        </Button>
+                    </Tooltip>
+                )}
+            </Box>
+            <Divider sx={{ my: 1 }} />
+            <List sx={{flexGrow: 1, overflowY: 'auto'}}>
                 {channels.map((channel) => (
-                    <ListItem key={channel.id} disablePadding>
+                    <ListItem key={channel.id} disablePadding
+                        secondaryAction={
+                            user.role === 'admin' ? (
+                                <IconButton edge="end" aria-label="options" onClick={(e) => handleMenuOpen(e, channel)}>
+                                    <MoreVertIcon />
+                                </IconButton>
+                            ) : null
+                        }
+                    >
                         <ListItemButton
                             selected={currentChannel?.id === channel.id}
                             onClick={() => onSelectChannel(channel)}
@@ -34,19 +64,14 @@ const ChannelList = ({ channels, currentChannel, onSelectChannel, projectId, onC
                     </ListItem>
                 ))}
             </List>
-            {user.role === 'admin' && (
-                <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                    <TextField
-                        fullWidth
-                        size="small"
-                        label="Create new channel"
-                        value={newChannelName}
-                        onChange={(e) => setNewChannelName(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleCreateChannel()}
-                    />
-                    <Button fullWidth variant="contained" sx={{ mt: 1 }} onClick={handleCreateChannel}>Create</Button>
-                </Box>
-            )}
+            <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleMenuClose}
+            >
+                <MenuItem onClick={handleEdit}>Edit</MenuItem>
+                <MenuItem onClick={handleDelete} sx={{color: 'error.main'}}>Delete</MenuItem>
+            </Menu>
         </Box>
     );
 };

@@ -1,5 +1,5 @@
-// src/contexts/ThemeProvider.js
-import React, { useState, useMemo, createContext, useContext } from 'react';
+// client/src/contexts/ThemeProvider.js
+import React, { useState, useMemo, createContext, useContext, useEffect } from 'react';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { lightTheme, darkTheme, cyberpunkTheme } from '../themes';
 import AuthContext from './AuthContext';
@@ -10,8 +10,14 @@ export const useThemeContext = () => useContext(ThemeContext);
 
 export const CustomThemeProvider = ({ children }) => {
     const { user } = useContext(AuthContext);
-    // Default to 'dark' if no user or user has no theme
-    const [themeName, setThemeName] = useState(user?.theme || 'dark');
+    const [themeName, setThemeName] = useState('dark'); // Default to dark
+
+    // This effect will run when the user logs in or their data changes
+    useEffect(() => {
+        if (user?.theme) {
+            setThemeName(user.theme);
+        }
+    }, [user]);
 
     const theme = useMemo(() => {
         switch (themeName) {

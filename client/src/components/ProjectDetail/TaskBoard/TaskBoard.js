@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { Box, CircularProgress, Alert, Button } from '@mui/material';
 import api from '../../../services/api';
-import TaskList from './TaskList'; // Updated import
+import TaskList from './TaskList';
 import TaskModal from './TaskModal';
 import AddIcon from '@mui/icons-material/Add';
 import AuthContext from '../../../contexts/AuthContext';
@@ -18,11 +18,15 @@ const TaskBoard = ({ projectId }) => {
 
     const fetchTasks = useCallback(async () => {
         try {
-            setLoading(true);
+            // No need to set loading to true here, to avoid screen flicker on minor updates
             const res = await api.get(`/tasks/project/${projectId}`);
-            setTasks(res.data);
+            // Sort tasks: "in progress" first, then "to do", then "complete"
+            const statusOrder = { 'in progress': 1, 'to do': 2, 'complete': 3 };
+            const sortedTasks = res.data.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+            setTasks(sortedTasks);
         } catch (err) {
             setError('Failed to fetch tasks.');
+            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -58,19 +62,35 @@ const TaskBoard = ({ projectId }) => {
             handleCloseModal();
         } catch (err) {
             console.error('Failed to save task:', err);
+            // You could set an error state here to show in the modal
         }
     };
     
     const handleStatusChange = async (taskId, newStatus) => {
         const originalTasks = [...tasks];
+        const taskToUpdate = tasks.find(t => t.id === taskId);
+
+        // Enforce user permissions
+        if (user.role !== 'admin' && taskToUpdate.status === 'complete') {
+            // Regular users cannot re-open tasks.
+            // Silently ignore or show a notification. For now, we'll just log and ignore.
+            console.log("User cannot re-open a completed task.");
+            return;
+        }
+
         try {
+            // Optimistic UI update
             setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? {...t, status: newStatus} : t));
+            
+            // API call - we only need to send the new status
             await api.put(`/tasks/${taskId}`, { status: newStatus });
-            // The list will visually update instantly. A full fetch isn't strictly necessary here
-            // unless other data besides status could have changed on the backend.
+
+            // On success, re-fetch and sort to ensure order is correct.
+            fetchTasks();
         } catch (error) {
             console.error("Failed to update task status", error);
-            setTasks(originalTasks); // Revert on failure
+            // Revert on failure
+            setTasks(originalTasks); 
         }
     };
 
@@ -78,14 +98,15 @@ const TaskBoard = ({ projectId }) => {
         if (window.confirm("Are you sure you want to delete this task?")) {
             try {
                 await api.delete(`/tasks/${taskId}`);
-                fetchTasks();
+                fetchTasks(); // Refresh the list
             } catch (error) {
+                setError('Failed to delete task.');
                 console.error("Failed to delete task", error);
             }
         }
     };
 
-    if (loading) return <CircularProgress />;
+    if (loading) return <Box sx={{display: 'flex', justifyContent: 'center', p: 5}}><CircularProgress /></Box>;
     if (error) return <Alert severity="error">{error}</Alert>;
 
     return (

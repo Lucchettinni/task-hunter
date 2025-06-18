@@ -1,6 +1,6 @@
-// src/components/ProjectDetail/Documentation/DocumentationTab.js
+// client/src/components/ProjectDetail/Documentation/DocumentationTab.js
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import { Box, Typography, CircularProgress, Alert, Button } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert, Button, Paper, Divider } from '@mui/material';
 import api from '../../../services/api';
 import DocSection from './DocSection';
 import AuthContext from '../../../contexts/AuthContext';
@@ -17,9 +17,9 @@ const DocumentationTab = ({ projectId }) => {
     const [error, setError] = useState('');
     const { user } = useContext(AuthContext);
 
-    const fetchDocs = useCallback(async () => {
+    const fetchDocs = useCallback(async (showLoader = false) => {
+        if (showLoader) setLoading(true);
         try {
-            setLoading(true);
             const res = await api.get(`/documentation/project/${projectId}`);
             if (res.data.length === 0 && user.role === 'admin') {
                 const creationPromises = defaultSections.map(title =>
@@ -40,7 +40,7 @@ const DocumentationTab = ({ projectId }) => {
     }, [projectId, user.role]);
 
     useEffect(() => {
-        fetchDocs();
+        fetchDocs(true);
     }, [fetchDocs]);
 
     const handleAddNewSection = async () => {
@@ -48,7 +48,8 @@ const DocumentationTab = ({ projectId }) => {
             await api.post('/documentation', {project_id: projectId, title: 'New Section', content: 'Content for the new section.'});
             fetchDocs(); // Refresh the list
         } catch (error) {
-            console.error("Failed to add new section", error)
+            setError('Failed to add new section.');
+            console.error("Failed to add new section", error);
         }
     };
 
@@ -62,30 +63,35 @@ const DocumentationTab = ({ projectId }) => {
         }
     };
 
-    if (loading) return <CircularProgress />;
-    if (error) return <Alert severity="error">{error}</Alert>;
-
+    if (loading) return <Box sx={{display: 'flex', justifyContent: 'center', p: 5}}><CircularProgress /></Box>;
+    
     return (
-        <Box>
+        <Paper sx={{ p: 3 }} elevation={2}>
             <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
-                <Typography variant="h5">Game Design Document</Typography>
+                <Typography variant="h5" component="h2">Game Design Document</Typography>
                 {user.role === 'admin' && (
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNewSection}>Add New Section</Button>
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNewSection}>Add Section</Button>
                 )}
             </Box>
+            <Divider sx={{ mb: 3 }} />
+
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
             {sections.length > 0 ? (
-                sections.map((section) => (
-                    <DocSection 
-                        key={section.id} 
-                        section={section} 
-                        onSave={fetchDocs} 
-                        onDelete={handleDeleteSection}
-                    />
-                ))
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {sections.map((section) => (
+                        <DocSection 
+                            key={section.id} 
+                            section={section} 
+                            onSave={fetchDocs} 
+                            onDelete={handleDeleteSection}
+                        />
+                    ))}
+                </Box>
             ) : (
-                <Typography>No documentation sections found.</Typography>
+                <Typography>No documentation sections found. An admin can add one to get started.</Typography>
             )}
-        </Box>
+        </Paper>
     );
 };
 
