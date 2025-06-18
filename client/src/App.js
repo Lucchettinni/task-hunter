@@ -1,6 +1,6 @@
 // src/App.js
 import React, { useState, useContext } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { CssBaseline, Box } from '@mui/material';
 import { CustomThemeProvider } from './contexts/ThemeProvider';
 import AuthContext from './contexts/AuthContext';
@@ -16,28 +16,29 @@ import ProfileModal from './components/Layout/ProfileModal';
 function AppContent() {
   const { user } = useContext(AuthContext);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const location = useLocation();
+
+  // Determine if the Navbar should be shown
+  const showNavbar = !['/login', '/signup'].includes(location.pathname);
 
   return (
     <>
-      <Navbar onOpenProfile={() => setProfileModalOpen(true)} />
+      {showNavbar && <Navbar onOpenProfile={() => setProfileModalOpen(true)} />}
       {user && <ProfileModal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} />}
-      <Box component="main" sx={{ pt: '64px', height: 'calc(100vh - 64px)' }}>
+      <Box component="main" sx={{ pt: showNavbar ? '64px' : 0, height: showNavbar ? 'calc(100vh - 64px)' : '100vh' }}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           
-          {/* Protected Routes */}
           <Route path="/" element={<PrivateRoute />}>
             <Route path="/" element={<ProjectList />} />
             <Route path="/project/:projectId" element={<ProjectView />} />
           </Route>
-
         </Routes>
       </Box>
     </>
   );
 }
-
 
 function App() {
   return (

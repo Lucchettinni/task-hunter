@@ -3,7 +3,6 @@ import React, { useContext } from 'react';
 import { AppBar, Toolbar, Typography, Button, Box, IconButton, Avatar, Tooltip } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthContext from '../../contexts/AuthContext';
-import SettingsIcon from '@mui/icons-material/Settings';
 
 const Navbar = ({ onOpenProfile }) => {
     const { user, logout } = useContext(AuthContext);
@@ -13,6 +12,20 @@ const Navbar = ({ onOpenProfile }) => {
         logout();
         navigate('/login');
     };
+    
+    // Function to generate a color from a string for the avatar background
+    const stringToColor = (string) => {
+        let hash = 0;
+        for (let i = 0; i < string.length; i += 1) {
+            hash = string.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        let color = '#';
+        for (let i = 0; i < 3; i += 1) {
+            const value = (hash >> (i * 8)) & 0xff;
+            color += `00${value.toString(16)}`.slice(-2);
+        }
+        return color;
+    }
 
     return (
         <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
@@ -23,13 +36,15 @@ const Navbar = ({ onOpenProfile }) => {
 
                 {user ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar src={user.profile_image_url} sx={{ width: 32, height: 32 }}>
-                            {user.name ? user.name.charAt(0).toUpperCase() : ''}
-                        </Avatar>
-                        <Typography sx={{ display: { xs: 'none', sm: 'block' } }}>{user.name}</Typography>
-                        <Tooltip title="Settings">
-                            <IconButton onClick={onOpenProfile} color="inherit">
-                                <SettingsIcon />
+                         <Typography sx={{ display: { xs: 'none', sm: 'block' } }}>
+                            Welcome, {user.name}
+                        </Typography>
+                        <Tooltip title="Profile & Settings">
+                             <IconButton onClick={onOpenProfile} sx={{ p: 0 }}>
+                                <Avatar alt={user.name} src={user.profile_image_url} sx={{ bgcolor: stringToColor(user.name || '') }}>
+                                    {/* Avatar component automatically shows the first letter if src is invalid/missing */}
+                                    {user.name ? user.name.charAt(0).toUpperCase() : ''}
+                                </Avatar>
                             </IconButton>
                         </Tooltip>
                         <Button color="inherit" onClick={handleLogout}>Logout</Button>

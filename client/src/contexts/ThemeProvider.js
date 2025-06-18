@@ -10,15 +10,19 @@ export const useThemeContext = () => useContext(ThemeContext);
 export const CustomThemeProvider = ({ children }) => {
     const { user } = useContext(AuthContext);
 
-    // Set default theme state, which will be updated by user context
-    const [themeName, setThemeName] = useState('dark');
-    const [primaryColor, setPrimaryColor] = useState('#90caf9'); // Default dark theme color
+    // Default to 'light' theme if no user is logged in.
+    const [themeName, setThemeName] = useState('light');
+    const [primaryColor, setPrimaryColor] = useState('#1976d2'); // Default light theme primary color
 
-    // Update theme state when user data changes
     useEffect(() => {
-        if (user) {
-            setThemeName(user.theme || 'dark');
-            setPrimaryColor(user.primary_color || (user.theme === 'light' ? '#1976d2' : '#90caf9'));
+        if (user && user.theme && user.primary_color) {
+            // If a user is logged in, apply their saved theme.
+            setThemeName(user.theme);
+            setPrimaryColor(user.primary_color);
+        } else {
+            // If no user or user has no theme saved, default to light theme.
+            setThemeName('light');
+            setPrimaryColor('#1976d2');
         }
     }, [user]);
 
@@ -43,7 +47,6 @@ export const CustomThemeProvider = ({ children }) => {
         return createTheme(baseTheme);
     }, [themeName, primaryColor]);
 
-    // Provide a way to update the theme contextually
     const contextValue = {
         themeName,
         setThemeName,

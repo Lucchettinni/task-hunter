@@ -2,9 +2,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
     Modal, Box, Typography, TextField, Button, Paper, Alert,
-    Tabs, Tab, Avatar, IconButton, InputAdornment, ToggleButtonGroup, ToggleButton
+    Tabs, Tab, Avatar, InputAdornment, ToggleButtonGroup, ToggleButton
 } from '@mui/material';
-import { PhotoCamera } from '@mui/icons-material';
 import api from '../../services/api';
 import AuthContext from '../../contexts/AuthContext';
 import { useThemeContext } from '../../contexts/ThemeProvider';
@@ -21,7 +20,7 @@ const modalStyle = {
 };
 
 const ProfileModal = ({ open, onClose }) => {
-    const { user, updateUser } = useContext(AuthContext);
+    const { user, login } = useContext(AuthContext); // Use login to update the token
     const { setThemeName, setPrimaryColor } = useThemeContext();
     const [tabIndex, setTabIndex] = useState(0);
 
@@ -44,6 +43,9 @@ const ProfileModal = ({ open, onClose }) => {
             setSelectedTheme(user.theme || 'dark');
             setSelectedColor(user.primary_color || (user.theme === 'light' ? '#1976d2' : '#90caf9'));
         }
+        // Reset feedback messages when modal opens or user changes
+        setError('');
+        setSuccess('');
     }, [user, open]);
 
     const handleTabChange = (event, newValue) => {
@@ -57,8 +59,10 @@ const ProfileModal = ({ open, onClose }) => {
         setError('');
         setSuccess('');
         try {
-            await api.updateUserProfile({ name, profile_image_url: profileImageUrl });
-            updateUser({ name, profile_image_url: profileImageUrl });
+            const { data } = await api.updateUserProfile({ name, profile_image_url: profileImageUrl });
+            if (data.token) {
+                login(data.token); // Re-login with the new token to update context
+            }
             setSuccess('Profile updated successfully!');
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to update profile.');
@@ -89,11 +93,10 @@ const ProfileModal = ({ open, onClose }) => {
         setError('');
         setSuccess('');
         try {
-            await api.updateUserTheme({ theme: selectedTheme, primary_color: selectedColor });
-            // Update context to reflect changes immediately
-            setThemeName(selectedTheme);
-            setPrimaryColor(selectedColor);
-            updateUser({ theme: selectedTheme, primary_color: selectedColor });
+            const { data } = await api.updateUserTheme({ theme: selectedTheme, primary_color: selectedColor });
+            if (data.token) {
+                login(data.token); // Re-login with the new token to update context
+            }
             setSuccess('Theme updated successfully!');
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to update theme.');
@@ -106,20 +109,19 @@ const ProfileModal = ({ open, onClose }) => {
                 <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
                     <Tabs value={tabIndex} onChange={handleTabChange} variant="fullWidth">
                         <Tab label="Profile" />
-                        <Tab label="Password" />
                         <Tab label="Appearance" />
+                        <Tab label="Password" />
                     </Tabs>
                 </Box>
                 
-                {/* Profile Tab */}
                 {tabIndex === 0 && (
                     <Box component="form" onSubmit={handleProfileUpdate} sx={{ p: 3 }}>
                         <Typography variant="h6" gutterBottom>Edit Profile</Typography>
                         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
                         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
                         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, position: 'relative' }}>
-                            <Avatar src={profileImageUrl} sx={{ width: 100, height: 100, fontSize: '2.5rem' }}>
-                                {name.charAt(0).toUpperCase()}
+                            <Avatar src={profileImageUrl || ''} sx={{ width: 100, height: 100, fontSize: '2.5rem' }}>
+                                {(name || ' ').charAt(0).toUpperCase()}
                             </Avatar>
                         </Box>
                         <TextField
@@ -134,30 +136,7 @@ const ProfileModal = ({ open, onClose }) => {
                     </Box>
                 )}
 
-                {/* Password Tab */}
-                {tabIndex === 1 && (
-                    <Box component="form" onSubmit={handlePasswordUpdate} sx={{ p: 3 }}>
-                         <Typography variant="h6" gutterBottom>Change Password</Typography>
-                         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-                         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
-                         <TextField
-                            fullWidth margin="normal" label="Current Password" type="password"
-                            value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
-                         />
-                         <TextField
-                            fullWidth margin="normal" label="New Password" type="password"
-                            value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                         />
-                          <TextField
-                            fullWidth margin="normal" label="Confirm New Password" type="password"
-                            value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                         />
-                         <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>Update Password</Button>
-                    </Box>
-                )}
-
-                 {/* Appearance Tab */}
-                 {tabIndex === 2 && (
+                 {tabIndex === 1 && (
                     <Box component="form" onSubmit={handleThemeUpdate} sx={{ p: 3 }}>
                          <Typography variant="h6" gutterBottom>Theme Settings</Typography>
                          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -186,6 +165,27 @@ const ProfileModal = ({ open, onClose }) => {
                             }}
                          />
                          <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>Save Theme</Button>
+                    </Box>
+                )}
+
+                {tabIndex === 2 && (
+                    <Box component="form" onSubmit={handlePasswordUpdate} sx={{ p: 3 }}>
+                         <Typography variant="h6" gutterBottom>Change Password</Typography>
+                         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+                         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+                         <TextField
+                            fullWidth margin="normal" label="Current Password" type="password" required
+                            value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
+                         />
+                         <TextField
+                            fullWidth margin="normal" label="New Password" type="password" required
+                            value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                         />
+                          <TextField
+                            fullWidth margin="normal" label="Confirm New Password" type="password" required
+                            value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                         />
+                         <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>Update Password</Button>
                     </Box>
                 )}
             </Paper>

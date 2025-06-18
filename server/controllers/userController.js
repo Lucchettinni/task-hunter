@@ -1,13 +1,28 @@
 // server/controllers/userController.js
 const db = require('../db');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken'); // Import jwt
+
+// Helper to generate token with a full user payload
+const generateToken = (user) => {
+    const userPayload = {
+        id: user.id,
+        username: user.username,
+        name: user.name || user.username,
+        email: user.email,
+        profile_image_url: user.profile_image_url,
+        role: user.role,
+        theme: user.theme,
+        primary_color: user.primary_color
+    };
+    return jwt.sign({ user: userPayload }, 'your_jwt_secret', { expiresIn: '1h' });
+};
 
 // @desc    Get all users (for admins to add to projects)
 // @route   GET /api/users
 // @access  Private (Admin only)
 exports.getAllUsers = async (req, res) => {
     try {
-        // Select id, username, and name
         const [users] = await db.query("SELECT id, username, name, role FROM users WHERE role = 'user'");
         res.json(users);
     } catch (err) {
@@ -24,7 +39,22 @@ exports.updateTheme = async (req, res) => {
     const userId = req.user.id;
     try {
         await db.query('UPDATE users SET theme = ?, primary_color = ? WHERE id = ?', [theme, primary_color, userId]);
-        res.json({ message: 'Theme updated successfully' });
+        
+        // Fetch the updated user to create a new token
+        const [users] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
+        if (users.length === 0) {
+            return res.status(404).json({ message: 'User not found after update.' });
+        }
+        const updatedUser = users[0];
+
+        // Generate a new token with updated info
+        const token = generateToken(updatedUser);
+
+        res.json({ 
+            message: 'Theme updated successfully',
+            token: token, // Send the new token back
+            user: updatedUser // Send the updated user object back
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -38,8 +68,23 @@ exports.updateProfile = async (req, res) => {
     const { name, profile_image_url } = req.body;
     const userId = req.user.id;
     try {
-        await db.query('UPDATE users SET name = ?, profile_image_url = ? WHERE id = ?', [name, profile_image_url, userId]);
-        res.json({ message: 'Profile updated successfully' });
+        await db.query('UPDATE users SET name = ?, profile_image_url = ? WHERE id = ?', [name, profile_image_url || null, userId]);
+        
+        // Fetch the updated user to create a new token
+        const [users] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
+        if (users.length === 0) {
+            return res.status(404).json({ message: 'User not found after update.' });
+        }
+        const updatedUser = users[0];
+
+        // Generate a new token with updated info
+        const token = generateToken(updatedUser);
+
+        res.json({ 
+            message: 'Profile updated successfully',
+            token: token, // Send the new token back
+            user: updatedUser // Send the updated user object back
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import PeopleIcon from '@mui/icons-material/People';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ImageIcon from '@mui/icons-material/Image'; // Icon for placeholder
 import AuthContext from '../../contexts/AuthContext';
 
 const ProjectItem = ({ project, onEdit, onDelete }) => {
@@ -14,9 +15,6 @@ const ProjectItem = ({ project, onEdit, onDelete }) => {
     const handleOpenProject = () => {
         navigate(`/project/${project.id}`);
     };
-    
-    // A fallback image in case one isn't provided
-    const imageUrl = project.image_url || `https://via.placeholder.com/345x140.png?text=${encodeURIComponent(project.title)}`;
 
     return (
         <Card sx={{ 
@@ -28,13 +26,28 @@ const ProjectItem = ({ project, onEdit, onDelete }) => {
                 boxShadow: 6,
             }
         }}>
-            <CardMedia
-                component="img"
-                height="140"
-                image={imageUrl}
-                alt={project.title}
-                sx={{ objectFit: 'cover' }}
-            />
+            {project.image_url ? (
+                <CardMedia
+                    component="img"
+                    height="140"
+                    image={project.image_url}
+                    alt={project.title}
+                    sx={{ objectFit: 'cover' }}
+                />
+            ) : (
+                <Box
+                    sx={{
+                        height: 140,
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backgroundColor: 'grey.200',
+                        color: 'grey.500',
+                    }}
+                >
+                    <ImageIcon sx={{ fontSize: '4rem' }} />
+                </Box>
+            )}
             <CardContent sx={{ flexGrow: 1 }}>
                 <Typography gutterBottom variant="h5" component="h2">{project.title}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ minHeight: '40px' }}>
