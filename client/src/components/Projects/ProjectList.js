@@ -1,11 +1,12 @@
 // src/components/Projects/ProjectList.js
 import React, { useState, useEffect, useContext } from 'react';
-import { Container, Grid, Typography, Box, CircularProgress, Alert, Paper } from '@mui/material';
+import { Container, Typography, Box, CircularProgress, Alert } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import api from '../../services/api';
 import AuthContext from '../../contexts/AuthContext';
 import ProjectItem from './ProjectItem';
 import ProjectModal from './ProjectModal';
+import BaseProjectCard from './BaseProjectCard';
 
 const ProjectList = () => {
     const [projects, setProjects] = useState([]);
@@ -95,56 +96,50 @@ const ProjectList = () => {
 
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
             
-            <Grid container spacing={3}>
+            <Box sx={{
+                display: 'grid',
+                gap: 3,
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            }}>
                 {projects.map((project) => (
-                    <Grid item key={project.id} xs={12} md={6} lg={4}>
-                        <ProjectItem 
-                            project={project}
-                            onEdit={handleOpenEditModal}
-                            onDelete={handleDeleteProject}
-                        />
-                    </Grid>
+                    <ProjectItem 
+                        key={project.id}
+                        project={project}
+                        onEdit={handleOpenEditModal}
+                        onDelete={handleDeleteProject}
+                    />
                 ))}
 
                 {/* New Project Card */}
                 {user?.role === 'admin' && (
-                     <Grid item xs={12} md={6} lg={4}>
-                        <Paper
-                            onClick={handleOpenCreateModal}
-                            sx={{
-                                height: 350, // Set a fixed height to match ProjectItem
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexDirection: 'column',
-                                gap: 1,
-                                borderRadius: 4,
-                                border: '3px dashed',
-                                borderColor: 'divider',
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease',
-                                '&:hover': {
-                                    borderColor: 'primary.main',
-                                    color: 'primary.main',
-                                    bgcolor: 'action.hover',
-                                    boxShadow: 4,
-                                }
-                            }}
-                        >
-                            <AddIcon sx={{ fontSize: '3rem' }} />
-                            <Typography variant="h6" fontWeight={600}>New Project</Typography>
-                        </Paper>
-                     </Grid>
+                    <BaseProjectCard
+                        onClick={handleOpenCreateModal}
+                        sx={{
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 1,
+                            border: '3px dashed',
+                            borderColor: 'divider',
+                            '&:hover': {
+                                borderColor: 'primary.main',
+                                color: 'primary.main',
+                                bgcolor: 'action.hover',
+                            },
+                        }}
+                    >
+                        <AddIcon sx={{ fontSize: '3rem' }} />
+                        <Typography variant="h6" fontWeight={600}>New Project</Typography>
+                    </BaseProjectCard>
                 )}
+            </Box>
 
-                 {projects.length === 0 && user?.role !== 'admin' && (
-                     <Grid item xs={12}>
-                       <Typography variant="subtitle1" color="text.secondary" sx={{textAlign: 'center', mt: 4}}>
-                           No projects found. An admin can create one to get started!
-                        </Typography>
-                    </Grid>
-                )}
-            </Grid>
+            {projects.length === 0 && user?.role !== 'admin' && (
+                 <Box sx={{ mt: 4, width: '100%' }}>
+                    <Typography variant="subtitle1" color="text.secondary" sx={{textAlign: 'center'}}>
+                        No projects found. An admin can create one to get started!
+                    </Typography>
+                </Box>
+            )}
 
             <ProjectModal
                 open={isModalOpen}
