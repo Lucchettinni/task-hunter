@@ -1,6 +1,6 @@
 // src/components/Projects/ProjectList.js
 import React, { useState, useEffect, useContext } from 'react';
-import { Container, Grid, Typography, Fab, Box, CircularProgress, Alert, Paper, Divider } from '@mui/material';
+import { Container, Grid, Typography, Box, CircularProgress, Alert, Paper } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import api from '../../services/api';
 import AuthContext from '../../contexts/AuthContext';
@@ -77,30 +77,67 @@ const ProjectList = () => {
     if (error && projects.length === 0) return <Container><Alert severity="error" sx={{ mt: 3 }}>{error}</Alert></Container>;
 
     return (
-        <Container sx={{ py: 4 }}>
-            <Paper sx={{ p: 4, mb: 4 }} elevation={2}>
-                 <Typography variant="h3" component="h1" gutterBottom>
-                    Welcome Hub
+        <Container maxWidth="xl" sx={{ py: 2 }}>
+            <Box sx={{
+                mb: 4,
+                p: 3,
+                backgroundColor: 'background.paper',
+                borderRadius: 4,
+                boxShadow: 1
+            }}>
+                <Typography variant="h4" component="h1" fontWeight={700}>
+                    Projects
                 </Typography>
                 <Typography variant="subtitle1" color="text.secondary">
-                    Select a project to continue or create a new one to get started.
+                    Select a project to continue or create a new one.
                 </Typography>
-            </Paper>
+            </Box>
 
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
             
-            <Grid container spacing={4}>
-                {projects.length > 0 ? (
-                    projects.map((project) => (
-                        <Grid item key={project.id} xs={12} sm={6} md={4}>
-                            <ProjectItem 
-                                project={project}
-                                onEdit={handleOpenEditModal}
-                                onDelete={handleDeleteProject}
-                            />
-                        </Grid>
-                    ))
-                ) : (
+            <Grid container spacing={3}>
+                {projects.map((project) => (
+                    <Grid item key={project.id} xs={12} md={6} lg={4}>
+                        <ProjectItem 
+                            project={project}
+                            onEdit={handleOpenEditModal}
+                            onDelete={handleDeleteProject}
+                        />
+                    </Grid>
+                ))}
+
+                {/* New Project Card */}
+                {user?.role === 'admin' && (
+                     <Grid item xs={12} md={6} lg={4}>
+                        <Paper
+                            onClick={handleOpenCreateModal}
+                            sx={{
+                                height: 350, // Set a fixed height to match ProjectItem
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexDirection: 'column',
+                                gap: 1,
+                                borderRadius: 4,
+                                border: '3px dashed',
+                                borderColor: 'divider',
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    borderColor: 'primary.main',
+                                    color: 'primary.main',
+                                    bgcolor: 'action.hover',
+                                    boxShadow: 4,
+                                }
+                            }}
+                        >
+                            <AddIcon sx={{ fontSize: '3rem' }} />
+                            <Typography variant="h6" fontWeight={600}>New Project</Typography>
+                        </Paper>
+                     </Grid>
+                )}
+
+                 {projects.length === 0 && user?.role !== 'admin' && (
                      <Grid item xs={12}>
                        <Typography variant="subtitle1" color="text.secondary" sx={{textAlign: 'center', mt: 4}}>
                            No projects found. An admin can create one to get started!
@@ -108,12 +145,6 @@ const ProjectList = () => {
                     </Grid>
                 )}
             </Grid>
-
-            {user?.role === 'admin' && (
-                <Fab color="primary" aria-label="add" sx={{ position: 'fixed', bottom: 32, right: 32 }} onClick={handleOpenCreateModal}>
-                    <AddIcon />
-                </Fab>
-            )}
 
             <ProjectModal
                 open={isModalOpen}

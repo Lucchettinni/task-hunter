@@ -1,9 +1,21 @@
 // src/components/Auth/SignUp.js
 import React, { useState, useContext } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import AuthContext from '../../contexts/AuthContext';
 import api from '../../services/api';
-import { Container, Box, TextField, Button, Typography, Paper, Alert } from '@mui/material';
+import { Box, TextField, Button, Typography, Paper, Alert, Link as MuiLink } from '@mui/material';
+import { keyframes } from '@mui/system';
+
+// Keyframe animations for the background
+const floatAnimation = keyframes`
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, -30px) scale(1.1); }
+`;
+
+const floatAnimationReverse = keyframes`
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-30px, 30px) scale(1.1); }
+`;
 
 const SignUp = () => {
     const [name, setName] = useState('');
@@ -39,67 +51,108 @@ const SignUp = () => {
     };
 
     return (
-        <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '100vh',
-            py: 4,
-            bgcolor: 'background.default'
-        }}>
-            <Container component="main" maxWidth="xs">
-                <Paper elevation={6} sx={{ padding: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <Typography component="h1" variant="h5">
-                        Create Account
+        <Box
+            sx={{
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                position: 'relative',
+                overflow: 'hidden',
+                py: 4
+            }}
+        >
+            {/* Background decorative elements */}
+            <Box
+                sx={{
+                    position: 'absolute',
+                    width: '100%',
+                    height: '100%',
+                    overflow: 'hidden',
+                    '&::before, &::after': {
+                        content: '""',
+                        position: 'absolute',
+                        width: { xs: 300, md: 600 },
+                        height: { xs: 300, md: 600 },
+                        borderRadius: '50%',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                    },
+                    '&::before': {
+                        top: { xs: -150, md: -300 },
+                        right: { xs: -150, md: -300 },
+                        animation: `${floatAnimation} 15s ease-in-out infinite`,
+                    },
+                    '&::after': {
+                        bottom: { xs: -150, md: -300 },
+                        left: { xs: -150, md: -300 },
+                        animation: `${floatAnimationReverse} 20s ease-in-out infinite`,
+                    },
+                }}
+            />
+            
+            <Paper
+                elevation={12}
+                sx={{
+                    padding: { xs: 3, sm: 4 },
+                    width: '100%',
+                    maxWidth: 420,
+                    zIndex: 10,
+                    borderRadius: '24px',
+                    backdropFilter: 'blur(10px)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                }}
+            >
+                <Typography component="h1" variant="h4" sx={{ 
+                    mb: 1, 
+                    color: 'primary.main', 
+                    textAlign: 'center', 
+                    fontWeight: 700 
+                }}>
+                    Create Account
+                </Typography>
+                <Typography color="text.secondary" textAlign="center" sx={{ mb: 3 }}>
+                    Join the hub and start tracking
+                </Typography>
+
+                <Box component="form" onSubmit={handleSubmit} noValidate>
+                    {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
+                    
+                    <TextField fullWidth required margin="dense" label="Full Name" name="name" value={name} onChange={(e) => setName(e.target.value)} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}/>
+                    <TextField fullWidth required margin="dense" label="Email Address" name="email" value={email} onChange={(e) => setEmail(e.target.value)} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}/>
+                    <TextField fullWidth required margin="dense" label="Username" name="username" value={username} onChange={(e) => setUsername(e.target.value)} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}/>
+                    <TextField fullWidth required margin="dense" label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}/>
+                    <TextField fullWidth required margin="dense" label="Confirm Password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}/>
+                    
+                    <Button
+                        type="submit"
+                        fullWidth
+                        variant="contained"
+                        sx={{
+                            mt: 3,
+                            mb: 2,
+                            py: 1.5,
+                            borderRadius: 3,
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 6px 20px rgba(0, 0, 0, 0.25)',
+                            }
+                        }}
+                    >
+                        Sign Up
+                    </Button>
+                    <Typography variant="body2" align="center" color="text.secondary">
+                        Already have an account?{' '}
+                        <MuiLink component={RouterLink} to="/login" variant="body2" sx={{fontWeight: 'bold'}}>
+                            Sign In
+                        </MuiLink>
                     </Typography>
-                    <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-                        {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
-                        <TextField
-                            margin="normal" required fullWidth id="name"
-                            label="Full Name" name="name" autoComplete="name"
-                            value={name} onChange={(e) => setName(e.target.value)}
-                        />
-                         <TextField
-                            margin="normal" required fullWidth id="email"
-                            label="Email Address" name="email" autoComplete="email"
-                            value={email} onChange={(e) => setEmail(e.target.value)}
-                        />
-                        <TextField
-                            margin="normal" required fullWidth id="username"
-                            label="Username" name="username" autoComplete="username"
-                            value={username} onChange={(e) => setUsername(e.target.value)}
-                        />
-                        <TextField
-                            margin="normal" required fullWidth name="password"
-                            label="Password" type="password" id="password"
-                            value={password} onChange={(e) => setPassword(e.target.value)}
-                        />
-                        <TextField
-                            margin="normal" required fullWidth name="confirmPassword"
-                            label="Confirm Password" type="password" id="confirmPassword"
-                            value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                        />
-                        <TextField
-                            margin="normal" fullWidth name="profileImageUrl"
-                            label="Profile Photo URL (Optional)" type="url" id="profileImageUrl"
-                            value={profileImageUrl} onChange={(e) => setProfileImageUrl(e.target.value)}
-                        />
-                        <Button
-                            type="submit" fullWidth variant="contained"
-                            sx={{ mt: 3, mb: 2 }}
-                        >
-                            Sign Up
-                        </Button>
-                        <Typography variant="body2" align="center">
-                            Already have an account?{' '}
-                            <Link to="/login" style={{ textDecoration: 'none' }}>
-                                <Button>Sign In</Button>
-                            </Link>
-                        </Typography>
-                    </Box>
-                </Paper>
-            </Container>
+                </Box>
+            </Paper>
         </Box>
     );
 };
