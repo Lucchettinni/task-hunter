@@ -1,3 +1,4 @@
+// lucchettinni/task-hunter/task-hunter-98dbd00d8848520e1f723ad482725bd869bc42bd/client/src/components/ProjectDetail/TaskBoard/TaskItem.js
 // client/src/components/ProjectDetail/TaskBoard/TaskItem.js
 import React, { useContext } from 'react';
 import { Paper, Typography, Box, Chip, Button, useTheme, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
@@ -104,15 +105,16 @@ const TaskItem = ({ task, onStatusChange, onEdit, onDelete }) => {
                     sx={{
                         backgroundColor: topBarColor,
                         color: topBarContrastColor,
+                        py: 1.5, // Consistent vertical padding
                         '& .MuiAccordionSummary-content': {
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            margin: '8px 0',
+                            margin: 0, // Remove margin from content to rely on parent padding
                         }
                     }}
                 >
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
                          <Typography variant="h6" component="div" sx={{ fontWeight: 500 }}>
                             {task.title}
                         </Typography>
@@ -126,6 +128,11 @@ const TaskItem = ({ task, onStatusChange, onEdit, onDelete }) => {
                             size="small"
                             sx={{ backgroundColor: statusMap[task.status].color, color: '#fff' }}
                         />
+                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                            {task.tags && task.tags.map(tag => (
+                                <Chip key={tag} label={tag} size="small" />
+                            ))}
+                        </Box>
                     </Box>
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
                         {renderProgressButton()}

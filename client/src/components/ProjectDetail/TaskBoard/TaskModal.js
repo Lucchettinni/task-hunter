@@ -1,3 +1,4 @@
+// lucchettinni/task-hunter/task-hunter-98dbd00d8848520e1f723ad482725bd869bc42bd/client/src/components/ProjectDetail/TaskBoard/TaskModal.js
 // src/components/ProjectDetail/TaskBoard/TaskModal.js
 import React, { useState, useEffect } from 'react';
 import { Modal, Box, Paper, Typography, TextField, Button, MenuItem, Chip, Stack } from '@mui/material';
@@ -96,7 +97,7 @@ const TaskModal = ({ open, onClose, onSave, task, projectId }) => {
                             />
                             <Button onClick={handleAddTag} sx={{ ml: 1 }}>Add</Button>
                         </Box>
-                        <Stack direction="row" spacing={1}>
+                        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                             {tags.map((tag) => (
                                 <Chip key={tag} label={tag} onDelete={() => handleDeleteTag(tag)} />
                             ))}
