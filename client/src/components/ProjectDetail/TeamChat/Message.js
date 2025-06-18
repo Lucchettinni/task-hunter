@@ -1,64 +1,76 @@
 // src/components/ProjectDetail/TeamChat/Message.js
 import React from 'react';
-import { Box, Paper, Typography, Link } from '@mui/material';
+import { Box, Paper, Typography, Link, Avatar } from '@mui/material';
+import FilePresentIcon from '@mui/icons-material/FilePresent';
 
-// Function to check if a URL points to an image
 const isImage = (url) => /\.(jpg|jpeg|png|gif)$/i.test(url);
+const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-const BACKEND_URL = 'http://localhost:5000';
-
+// A styled component for attachments
 const Attachment = ({ url }) => {
-    // Prepend backend URL to the relative path
     const fullUrl = `${BACKEND_URL}${url}`;
     const filename = url.split('/').pop();
 
     if (isImage(url)) {
-        // Use the fullUrl for the image source
-        return <img src={fullUrl} alt="attachment" style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '8px' }} />;
+        return (
+            <Link href={fullUrl} target="_blank" rel="noopener noreferrer" sx={{ display: 'block', mt: 1 }}>
+                <img src={fullUrl} alt="attachment" style={{ maxWidth: '250px', maxHeight: '250px', borderRadius: '12px', objectFit: 'cover' }} />
+            </Link>
+        );
     }
     
-    // Use the fullUrl for the download link
     return (
-        <Link href={fullUrl} target="_blank" rel="noopener noreferrer" sx={{ mt: 1 }}>
-            {filename}
-        </Link>
+        <Paper variant="outlined" sx={{ mt: 1, p: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FilePresentIcon color="action" />
+            <Link href={fullUrl} target="_blank" rel="noopener noreferrer" underline="hover" sx={{ flexGrow: 1 }}>
+                {filename}
+            </Link>
+        </Paper>
     );
 };
 
 const Message = ({ msg, isOwnMessage }) => {
-    // Format the timestamp to be more readable
     const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    // Simple avatar generator
+    const stringToColor = (string) => {
+        let hash = 0;
+        for (let i = 0; i < string.length; i += 1) {
+            hash = string.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        let color = '#';
+        for (let i = 0; i < 3; i += 1) {
+            const value = (hash >> (i * 8)) & 0xff;
+            color += `00${value.toString(16)}`.slice(-2);
+        }
+        return color;
+    }
 
     return (
         <Box sx={{
             display: 'flex',
             justifyContent: isOwnMessage ? 'flex-end' : 'flex-start',
             mb: 2,
+            gap: 1,
+            flexDirection: isOwnMessage ? 'row-reverse' : 'row',
         }}>
-            <Box>
-                 <Typography variant="caption" sx={{
-                    color: 'text.secondary',
-                    display: 'block',
-                    textAlign: isOwnMessage ? 'right' : 'left',
-                    mx: 1.5
-                }}>
-                    {msg.username}
+            <Avatar sx={{ bgcolor: stringToColor(msg.username), width: 40, height: 40 }}>
+                {msg.username.charAt(0).toUpperCase()}
+            </Avatar>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: isOwnMessage ? 'flex-end' : 'flex-start' }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 0.5 }}>
+                    {msg.username} • {time}
                 </Typography>
-                <Paper elevation={2} sx={{
+                <Paper elevation={1} sx={{
                     p: 1.5,
                     backgroundColor: isOwnMessage ? 'primary.main' : 'background.paper',
                     color: isOwnMessage ? 'primary.contrastText' : 'text.primary',
                     maxWidth: '500px',
                     borderRadius: isOwnMessage ? '20px 20px 5px 20px' : '20px 20px 20px 5px',
                 }}>
-                    {/* Render the message text if it exists */}
                     {msg.message && <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</Typography>}
-                    {/* Render the attachment if it exists */}
                     {msg.attachment_url && <Attachment url={msg.attachment_url} />}
                 </Paper>
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', textAlign: isOwnMessage ? 'right' : 'left', mx: 1.5, mt: 0.5 }}>
-                    {time}
-                </Typography>
             </Box>
         </Box>
     );

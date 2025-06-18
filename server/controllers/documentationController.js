@@ -48,3 +48,16 @@ exports.updateDocSection = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+// @desc    Delete a documentation section
+// @route   DELETE /api/documentation/:id
+// @access  Private (Admin only)
+exports.deleteDocSection = async (req, res) => {
+    try {
+        await db.query('DELETE FROM documentation_sections WHERE id = ?', [req.params.id]);
+        res.json({ msg: 'Documentation section deleted' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};

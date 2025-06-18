@@ -1,9 +1,9 @@
-// src/components/ProjectDetail/TaskBoard/TaskBoard.js
+// client/src/components/ProjectDetail/TaskBoard/TaskBoard.js
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import { Grid, Box, CircularProgress, Alert, Button } from '@mui/material';
+import { Box, CircularProgress, Alert, Button } from '@mui/material';
 import api from '../../../services/api';
-import TaskColumn from './TaskColumn';
-import TaskModal from './TaskModal'; // Import the new modal
+import TaskList from './TaskList'; // Updated import
+import TaskModal from './TaskModal';
 import AddIcon from '@mui/icons-material/Add';
 import AuthContext from '../../../contexts/AuthContext';
 
@@ -13,7 +13,6 @@ const TaskBoard = ({ projectId }) => {
     const [error, setError] = useState('');
     const { user } = useContext(AuthContext);
 
-    // State for the modal
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
 
@@ -32,11 +31,9 @@ const TaskBoard = ({ projectId }) => {
     useEffect(() => {
         fetchTasks();
     }, [fetchTasks]);
-    
-    // --- CRUD Handlers ---
 
     const handleOpenCreateModal = () => {
-        setEditingTask(null); // Make sure it's in 'create' mode
+        setEditingTask(null);
         setIsModalOpen(true);
     };
 
@@ -53,27 +50,27 @@ const TaskBoard = ({ projectId }) => {
     const handleSaveTask = async (taskData, taskId) => {
         try {
             if (taskId) {
-                // Editing an existing task
                 await api.put(`/tasks/${taskId}`, taskData);
             } else {
-                // Creating a new task
-                await api.post('/tasks', taskData);
+                await api.post('/tasks', { ...taskData, project_id: projectId });
             }
-            fetchTasks(); // Refresh list
+            fetchTasks();
             handleCloseModal();
         } catch (err) {
             console.error('Failed to save task:', err);
-            // Optionally set an error state to show in the modal
         }
     };
-
+    
     const handleStatusChange = async (taskId, newStatus) => {
+        const originalTasks = [...tasks];
         try {
             setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? {...t, status: newStatus} : t));
             await api.put(`/tasks/${taskId}`, { status: newStatus });
+            // The list will visually update instantly. A full fetch isn't strictly necessary here
+            // unless other data besides status could have changed on the backend.
         } catch (error) {
             console.error("Failed to update task status", error);
-            fetchTasks(); // Revert on failure
+            setTasks(originalTasks); // Revert on failure
         }
     };
 
@@ -88,35 +85,23 @@ const TaskBoard = ({ projectId }) => {
         }
     };
 
-    // --- Render Logic ---
-
     if (loading) return <CircularProgress />;
     if (error) return <Alert severity="error">{error}</Alert>;
-
-    const columns = {
-        'to do': tasks.filter(t => t.status === 'to do'),
-        'in progress': tasks.filter(t => t.status === 'in progress'),
-        'complete': tasks.filter(t => t.status === 'complete'),
-    };
 
     return (
         <Box>
             {user.role === 'admin' && (
-                <Button variant="contained" startIcon={<AddIcon />} sx={{ mb: 3 }} onClick={handleOpenCreateModal}>
+                <Button variant="contained" startIcon={<AddIcon />} sx={{ mb: 2 }} onClick={handleOpenCreateModal}>
                     Create Task
                 </Button>
             )}
-            <Grid container spacing={2}>
-                <Grid item xs={12} md={4}>
-                    <TaskColumn title="To Do" tasks={columns['to do']} onStatusChange={handleStatusChange} onEdit={handleOpenEditModal} onDelete={handleDelete} />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                    <TaskColumn title="In Progress" tasks={columns['in progress']} onStatusChange={handleStatusChange} onEdit={handleOpenEditModal} onDelete={handleDelete} />
-                </Grid>
-                <Grid item xs={12} md={4}>
-                    <TaskColumn title="Complete" tasks={columns['complete']} onStatusChange={handleStatusChange} onEdit={handleOpenEditModal} onDelete={handleDelete} />
-                </Grid>
-            </Grid>
+            
+            <TaskList 
+                tasks={tasks} 
+                onStatusChange={handleStatusChange} 
+                onEdit={handleOpenEditModal} 
+                onDelete={handleDelete} 
+            />
 
             <TaskModal
                 open={isModalOpen}

@@ -31,7 +31,6 @@ exports.getProjects = async (req, res) => {
     }
 };
 
-
 // @desc    Create a new project
 // @route   POST /api/projects
 // @access  Private (Admin only)
@@ -69,7 +68,6 @@ exports.updateProject = async (req, res) => {
     }
 };
 
-
 // @desc    Add a user to a project
 // @route   POST /api/projects/:id/users
 // @access  Private (Admin only)
@@ -88,6 +86,42 @@ exports.addUserToProject = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
+
+// @desc    Get all users for a project
+// @route   GET /api/projects/:id/users
+// @access  Private
+exports.getProjectUsers = async (req, res) => {
+    try {
+        const [users] = await db.query(
+            `SELECT u.id, u.username, u.role FROM users u 
+             JOIN project_users pu ON u.id = pu.user_id 
+             WHERE pu.project_id = ?`,
+            [req.params.id]
+        );
+        res.json(users);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Remove a user from a project
+// @route   DELETE /api/projects/:id/users/:userId
+// @access  Private (Admin only)
+exports.removeUserFromProject = async (req, res) => {
+    const { id: projectId, userId } = req.params;
+    try {
+        await db.query(
+            'DELETE FROM project_users WHERE project_id = ? AND user_id = ?',
+            [projectId, userId]
+        );
+        res.json({ message: 'User removed from project' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
 
 // @desc    Delete a project
 // @route   DELETE /api/projects/:id
