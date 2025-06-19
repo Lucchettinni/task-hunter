@@ -78,8 +78,14 @@ const Message = ({ msg, onEditMessage, onDeleteMessage }) => {
             justifyContent: 'flex-start',
             mb: 2,
             gap: 1.5,
-            '&:hover .message-actions': {
-                opacity: 1,
+            p: 1, // Add some padding for the hover effect
+            borderRadius: 2,
+            transition: 'background-color 0.2s',
+            '&:hover': {
+                backgroundColor: theme.palette.action.hover,
+                '.message-actions': {
+                    opacity: 1,
+                }
             }
         }}>
             <Avatar src={msg.profile_image_url || ''} sx={{ bgcolor: msg.primary_color || 'primary.main', width: 40, height: 40, mt: 0.5 }}>

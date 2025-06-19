@@ -141,8 +141,10 @@ exports.addUserToProject = async (req, res) => {
 // @access  Private
 exports.getProjectUsers = async (req, res) => {
     try {
+        // CHANGE: The SQL query now selects the user's profile_image_url and primary_color.
         const [users] = await db.query(
-            `SELECT u.id, u.username, u.role FROM users u 
+            `SELECT u.id, u.username, u.role, u.profile_image_url, u.primary_color 
+             FROM users u 
              JOIN project_users pu ON u.id = pu.user_id 
              WHERE pu.project_id = ?`,
             [req.params.id]

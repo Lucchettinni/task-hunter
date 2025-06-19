@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { Box, Typography, Button, IconButton, Menu, MenuItem, Collapse, CircularProgress, Alert, Divider, Tooltip } from '@mui/material';
+import { Box, Typography, Button, IconButton, Menu, MenuItem, Collapse, CircularProgress, Alert, Divider, Tooltip, useTheme } from '@mui/material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import AuthContext from '../../../contexts/AuthContext';
 import api from '../../../services/api';
@@ -8,6 +8,8 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import { darken } from '@mui/material/styles';
+
 
 import CategoryModal from './CategoryModal';
 import ChannelModal from './ChannelModal';
@@ -16,6 +18,9 @@ import ChannelModal from './ChannelModal';
 const DraggableChannel = ({ channel, index, onSelectChannel, currentChannelId, onEdit, onDelete }) => {
     const { user } = useContext(AuthContext);
     const [anchorEl, setAnchorEl] = useState(null);
+    const theme = useTheme();
+    const isSelected = currentChannelId === channel.id;
+
 
     const handleMenuOpen = (event) => {
         event.stopPropagation();
@@ -46,13 +51,18 @@ const DraggableChannel = ({ channel, index, onSelectChannel, currentChannelId, o
                     {...provided.dragHandleProps}
                     sx={{
                         display: 'flex', alignItems: 'center', pl: 4, py: 0.5, borderRadius: 1, cursor: 'pointer',
-                        backgroundColor: snapshot.isDragging ? 'action.hover' : (currentChannelId === channel.id ? 'primary.light' : 'transparent'),
-                        color: currentChannelId === channel.id ? 'primary.contrastText' : 'text.primary',
-                        '&:hover': { backgroundColor: 'action.hover', '.channel-actions': { opacity: 1 } },
+                        backgroundColor: snapshot.isDragging ? 'action.hover' : (isSelected ? theme.palette.primary.light : 'transparent'),
+                        color: isSelected ? theme.palette.primary.contrastText : 'text.primary',
+                        '&:hover': {
+                            backgroundColor: isSelected
+                                ? darken(theme.palette.primary.light, 0.1)
+                                : theme.palette.action.hover,
+                            '.channel-actions': { opacity: 1 }
+                        },
                     }}
                     onClick={() => onSelectChannel(channel)}
                 >
-                    <Typography variant="body2" component="span" sx={{ mr: 0.5, color: 'text.secondary' }}>#</Typography>
+                    <Typography variant="body2" component="span" sx={{ mr: 0.5, color: isSelected ? theme.palette.primary.contrastText : 'text.secondary' }}>#</Typography>
                     <Typography variant="body1" sx={{ flexGrow: 1 }}>{channel.name}</Typography>
                     {user.role === 'admin' && (
                         <Box className="channel-actions" sx={{ opacity: 0 }}>

@@ -2,7 +2,9 @@
 import React from 'react';
 import { Box, Typography, List, ListItem, ListItemText, ListItemIcon, Avatar, Badge, Divider, Tooltip } from '@mui/material';
 import CircleIcon from '@mui/icons-material/Circle';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'; // Import admin icon
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+
+const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const UserListItem = ({ user }) => {
     const stringToColor = (string) => {
@@ -17,7 +19,7 @@ const UserListItem = ({ user }) => {
             color += `00${value.toString(16)}`.slice(-2);
         }
         return color;
-    }
+    };
 
     const stringAvatar = (name) => {
         return {
@@ -29,7 +31,10 @@ const UserListItem = ({ user }) => {
             },
             children: `${(name || 'U').charAt(0).toUpperCase()}`,
         };
-    }
+    };
+    
+    // CHANGE: Conditionally create the full image URL by prepending the backend address.
+    const fullImageUrl = user.profile_image_url ? `${BACKEND_URL}${user.profile_image_url}` : '';
 
     return (
          <ListItem disablePadding sx={{mb: 1}}>
@@ -46,12 +51,12 @@ const UserListItem = ({ user }) => {
                         }} />
                      }
                  >
-                    <Avatar src={user.profile_image_url || ''} {...stringAvatar(user.username)} />
+                    {/* CHANGE: The Avatar now uses the corrected fullImageUrl. */}
+                    <Avatar src={fullImageUrl} {...stringAvatar(user.username)} />
                  </Badge>
              </ListItemIcon>
             <ListItemText 
                 primary={
-                    // CHANGE: Added a Box to display the username and admin icon together
                     <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
                         {user.username}
                         {user.role === 'admin' && (
@@ -63,26 +68,24 @@ const UserListItem = ({ user }) => {
                 } 
             />
         </ListItem>
-    )
-}
+    );
+};
 
 const UserList = ({ users }) => {
     const admins = users.filter(u => u.role === 'admin');
     const members = users.filter(u => u.role !== 'admin');
 
-    // CHANGE: Increased padding on the root Box from p:1 to p:2 for better spacing
     return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 2 }}>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 2, bgcolor: 'background.paper' }}>
             {admins.length > 0 && (
                 <>
                     <Box sx={{ px: 1, pt: 1 }}>
                         <Typography variant="overline" color="text.secondary">Admins — {admins.length}</Typography>
                     </Box>
-                    {/* CHANGE: Added a Divider below the "Admins" header */}
                     <Divider sx={{ my: 1 }} />
                     <List sx={{ overflowY: 'auto', p: 1, pt: 0 }}>
                         {admins.map(user => (
-                           <UserListItem key={user.userId} user={user} />
+                           <UserListItem key={user.id} user={user} />
                         ))}
                     </List>
                 </>
@@ -93,11 +96,10 @@ const UserList = ({ users }) => {
                     <Box sx={{ px: 1, pt: 1 }}>
                         <Typography variant="overline" color="text.secondary">Members — {members.length}</Typography>
                     </Box>
-                     {/* CHANGE: Added a Divider below the "Members" header */}
-                    <Divider sx={{ my: 1 }} />
+                     <Divider sx={{ my: 1 }} />
                      <List sx={{ flexGrow: 1, overflowY: 'auto', p: 1, pt: 0 }}>
                         {members.map(user => (
-                            <UserListItem key={user.userId} user={user} />
+                            <UserListItem key={user.id} user={user} />
                         ))}
                     </List>
                 </>
