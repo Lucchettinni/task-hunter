@@ -1,10 +1,11 @@
 // client/src/components/ProjectDetail/TaskBoard/TaskBoard.js
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import { Box, CircularProgress, Alert, Button } from '@mui/material';
+import { Box, CircularProgress, Alert, Button, IconButton, Tooltip } from '@mui/material';
 import api from '../../../services/api';
 import TaskList from './TaskList';
 import TaskModal from './TaskModal';
 import AddIcon from '@mui/icons-material/Add';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import AuthContext from '../../../contexts/AuthContext';
 
 const TaskBoard = ({ projectId }) => {
@@ -16,11 +17,10 @@ const TaskBoard = ({ projectId }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
 
-    const fetchTasks = useCallback(async () => {
+    const fetchTasks = useCallback(async (showLoader = false) => {
+        if (showLoader) setLoading(true);
         try {
-            // No need to set loading to true here, to avoid screen flicker on minor updates
             const res = await api.get(`/tasks/project/${projectId}`);
-            // Sort tasks: "in progress" first, then "to do", then "complete"
             const statusOrder = { 'in progress': 1, 'to do': 2, 'complete': 3 };
             const sortedTasks = res.data.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
             setTasks(sortedTasks);
@@ -33,7 +33,7 @@ const TaskBoard = ({ projectId }) => {
     }, [projectId]);
 
     useEffect(() => {
-        fetchTasks();
+        fetchTasks(true);
     }, [fetchTasks]);
 
     const handleOpenCreateModal = () => {
@@ -62,7 +62,6 @@ const TaskBoard = ({ projectId }) => {
             handleCloseModal();
         } catch (err) {
             console.error('Failed to save task:', err);
-            // You could set an error state here to show in the modal
         }
     };
     
@@ -70,26 +69,17 @@ const TaskBoard = ({ projectId }) => {
         const originalTasks = [...tasks];
         const taskToUpdate = tasks.find(t => t.id === taskId);
 
-        // Enforce user permissions
         if (user.role !== 'admin' && taskToUpdate.status === 'complete') {
-            // Regular users cannot re-open tasks.
-            // Silently ignore or show a notification. For now, we'll just log and ignore.
             console.log("User cannot re-open a completed task.");
             return;
         }
 
         try {
-            // Optimistic UI update
             setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? {...t, status: newStatus} : t));
-            
-            // API call - we only need to send the new status
             await api.put(`/tasks/${taskId}`, { status: newStatus });
-
-            // On success, re-fetch and sort to ensure order is correct.
             fetchTasks();
         } catch (error) {
             console.error("Failed to update task status", error);
-            // Revert on failure
             setTasks(originalTasks); 
         }
     };
@@ -98,7 +88,7 @@ const TaskBoard = ({ projectId }) => {
         if (window.confirm("Are you sure you want to delete this task?")) {
             try {
                 await api.delete(`/tasks/${taskId}`);
-                fetchTasks(); // Refresh the list
+                fetchTasks();
             } catch (error) {
                 setError('Failed to delete task.');
                 console.error("Failed to delete task", error);
@@ -111,11 +101,18 @@ const TaskBoard = ({ projectId }) => {
 
     return (
         <Box>
-            {user.role === 'admin' && (
-                <Button variant="contained" startIcon={<AddIcon />} sx={{ mb: 2 }} onClick={handleOpenCreateModal}>
-                    Create Task
-                </Button>
-            )}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                {user.role === 'admin' ? (
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreateModal}>
+                        Create Task
+                    </Button>
+                ) : <div />}
+                <Tooltip title="Refresh Tasks">
+                    <IconButton onClick={() => fetchTasks(true)}>
+                        <RefreshIcon />
+                    </IconButton>
+                </Tooltip>
+            </Box>
             
             <TaskList 
                 tasks={tasks} 

@@ -1,15 +1,11 @@
 // client/src/components/ProjectDetail/Documentation/DocumentationTab.js
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import { Box, Typography, CircularProgress, Alert, Button, Paper, Divider } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert, Button, Paper, Divider, IconButton, Tooltip } from '@mui/material';
 import api from '../../../services/api';
 import DocSection from './DocSection';
 import AuthContext from '../../../contexts/AuthContext';
 import AddIcon from '@mui/icons-material/Add';
-
-const defaultSections = [
-    "Game Overview", "Game Mechanics", "Story & Lore", 
-    "Art Direction", "Technical Specifications", "Development Timeline"
-];
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 const DocumentationTab = ({ projectId }) => {
     const [sections, setSections] = useState([]);
@@ -21,23 +17,14 @@ const DocumentationTab = ({ projectId }) => {
         if (showLoader) setLoading(true);
         try {
             const res = await api.get(`/documentation/project/${projectId}`);
-            if (res.data.length === 0 && user.role === 'admin') {
-                const creationPromises = defaultSections.map(title =>
-                    api.post('/documentation', { project_id: projectId, title, content: '' })
-                );
-                await Promise.all(creationPromises);
-                const newRes = await api.get(`/documentation/project/${projectId}`);
-                setSections(newRes.data);
-            } else {
-                setSections(res.data);
-            }
+            setSections(res.data);
         } catch (err) {
-            setError('Failed to fetch or create documentation.');
+            setError('Failed to fetch documentation.');
             console.error(err);
         } finally {
             setLoading(false);
         }
-    }, [projectId, user.role]);
+    }, [projectId]);
 
     useEffect(() => {
         fetchDocs(true);
@@ -54,12 +41,14 @@ const DocumentationTab = ({ projectId }) => {
     };
 
     const handleDeleteSection = async (sectionId) => {
-        try {
-            await api.delete(`/documentation/${sectionId}`);
-            fetchDocs(); // Refresh list after deleting
-        } catch (error) {
-            setError('Failed to delete section.');
-            console.error("Failed to delete section", error);
+        if (window.confirm("Are you sure you want to delete this section?")) {
+            try {
+                await api.delete(`/documentation/${sectionId}`);
+                fetchDocs(); // Refresh list after deleting
+            } catch (error) {
+                setError('Failed to delete section.');
+                console.error("Failed to delete section", error);
+            }
         }
     };
 
@@ -69,9 +58,16 @@ const DocumentationTab = ({ projectId }) => {
         <Paper sx={{ p: 3 }} elevation={2}>
             <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
                 <Typography variant="h5" component="h2">Game Design Document</Typography>
-                {user.role === 'admin' && (
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNewSection}>Add Section</Button>
-                )}
+                <Box>
+                    {user.role === 'admin' && (
+                        <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddNewSection} sx={{ mr: 1 }}>Add Section</Button>
+                    )}
+                    <Tooltip title="Refresh Documentation">
+                        <IconButton onClick={() => fetchDocs(true)}>
+                            <RefreshIcon />
+                        </IconButton>
+                    </Tooltip>
+                </Box>
             </Box>
             <Divider sx={{ mb: 3 }} />
 
@@ -84,7 +80,7 @@ const DocumentationTab = ({ projectId }) => {
                             key={section.id} 
                             section={section} 
                             onSave={fetchDocs} 
-                            onDelete={handleDeleteSection}
+                            onDelete={() => handleDeleteSection(section.id)}
                         />
                     ))}
                 </Box>

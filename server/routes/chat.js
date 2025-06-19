@@ -3,27 +3,35 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { getChannels, createChannel, getMessages, updateChannel, deleteChannel } = require('../controllers/chatController');
+const { 
+    getChannels, 
+    createChannel, 
+    getMessages, 
+    updateChannel, 
+    deleteChannel,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    updateChannelOrder
+} = require('../controllers/chatController');
 const { protect, isAdmin } = require('../middleware/authMiddleware');
 
 // --- Multer Configuration ---
 const storage = multer.diskStorage({
     destination: './public/uploads/',
     filename: function(req, file, cb){
-        // Create a unique filename to prevent overwriting
         cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
     }
 });
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 10000000 } // Limit file size to 10MB
-}).single('chat-attachment'); // 'chat-attachment' will be the name of the form field
+    limits: { fileSize: 10000000 }
+}).single('chat-attachment');
 
 // --- Routes ---
 router.use(protect);
 
-// New endpoint for handling file uploads
 router.post('/upload', (req, res) => {
     upload(req, res, (err) => {
         if (err) {
@@ -32,20 +40,24 @@ router.post('/upload', (req, res) => {
         if (req.file == undefined) {
             return res.status(400).json({ message: 'No file selected!' });
         }
-        // Return the public URL of the uploaded file
         res.json({
             message: 'File uploaded successfully!',
-            // The path will be like /uploads/chat-attachment-1678886400000.png
             filePath: `/uploads/${req.file.filename}`
         });
     });
 });
 
+// Category Routes
+router.post('/categories', isAdmin, createCategory);
+router.put('/categories/:categoryId', isAdmin, updateCategory);
+router.delete('/categories/:categoryId', isAdmin, deleteCategory);
+
 // Channel Routes
 router.get('/channels/:projectId', getChannels);
 router.post('/channels', isAdmin, createChannel);
-router.put('/channels/:channelId', isAdmin, updateChannel); // New route
-router.delete('/channels/:channelId', isAdmin, deleteChannel); // New route
+router.put('/channels/:channelId', isAdmin, updateChannel);
+router.delete('/channels/:channelId', isAdmin, deleteChannel);
+router.put('/channels/order', isAdmin, updateChannelOrder);
 
 // Message Routes
 router.get('/messages/:channelId', getMessages);

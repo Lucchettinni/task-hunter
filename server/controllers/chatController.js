@@ -1,13 +1,87 @@
 // server/controllers/chatController.js
 const db = require('../db');
 
-// @desc    Get all channels for a project
+// --- Category Controllers ---
+
+// @desc    Create a new channel category
+// @route   POST /api/chat/categories
+// @access  Private (Admin only)
+exports.createCategory = async (req, res) => {
+    const { project_id, name } = req.body;
+    if (!name || name.trim().length === 0) {
+        return res.status(400).json({ message: 'Category name cannot be empty.' });
+    }
+    try {
+        const [result] = await db.query(
+            'INSERT INTO channel_categories (project_id, name) VALUES (?, ?)',
+            [project_id, name.trim()]
+        );
+        res.status(201).json({ id: result.insertId, project_id, name, channels: [] });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Update a category's name
+// @route   PUT /api/chat/categories/:categoryId
+// @access  Private (Admin only)
+exports.updateCategory = async (req, res) => {
+    const { name } = req.body;
+    const { categoryId } = req.params;
+    if (!name || name.trim().length === 0) {
+        return res.status(400).json({ message: 'Category name cannot be empty.' });
+    }
+    try {
+        await db.query('UPDATE channel_categories SET name = ? WHERE id = ?', [name.trim(), categoryId]);
+        res.json({ message: 'Category updated successfully.' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// @desc    Delete a category
+// @route   DELETE /api/chat/categories/:categoryId
+// @access  Private (Admin only)
+exports.deleteCategory = async (req, res) => {
+    const { categoryId } = req.params;
+    try {
+        await db.query('DELETE FROM channel_categories WHERE id = ?', [categoryId]);
+        res.json({ message: 'Category deleted successfully.' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+// --- Channel Controllers (Updated) ---
+
+// @desc    Get all channels for a project, grouped by category
 // @route   GET /api/chat/channels/:projectId
 // @access  Private
 exports.getChannels = async (req, res) => {
     try {
-        const [channels] = await db.query('SELECT * FROM channels WHERE project_id = ? ORDER BY name ASC', [req.params.projectId]);
-        res.json(channels);
+        const [categories] = await db.query('SELECT * FROM channel_categories WHERE project_id = ? ORDER BY sort_order ASC, name ASC', [req.params.projectId]);
+        const [channels] = await db.query('SELECT * FROM channels WHERE project_id = ? ORDER BY sort_order ASC, name ASC', [req.params.projectId]);
+
+        const categoryMap = new Map(categories.map(cat => [cat.id, { ...cat, channels: [] }]));
+        const uncategorized = { id: null, name: 'Uncategorized', channels: [] };
+
+        for (const channel of channels) {
+            if (channel.category_id && categoryMap.has(channel.category_id)) {
+                categoryMap.get(channel.category_id).channels.push(channel);
+            } else {
+                uncategorized.channels.push(channel);
+            }
+        }
+
+        const result = [...categoryMap.values()];
+        if (uncategorized.channels.length > 0) {
+            result.push(uncategorized);
+        }
+
+        res.json(result);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -18,23 +92,23 @@ exports.getChannels = async (req, res) => {
 // @route   POST /api/chat/channels
 // @access  Private (Admin only)
 exports.createChannel = async (req, res) => {
-    const { project_id, name } = req.body;
+    const { project_id, name, category_id } = req.body;
     if (!name || name.trim().length === 0) {
         return res.status(400).json({ message: 'Channel name cannot be empty.' });
     }
     try {
         const [result] = await db.query(
-            'INSERT INTO channels (project_id, name) VALUES (?, ?)',
-            [project_id, name.trim()]
+            'INSERT INTO channels (project_id, name, category_id) VALUES (?, ?, ?)',
+            [project_id, name.trim(), category_id || null]
         );
-        res.status(201).json({ id: result.insertId, project_id, name });
+        res.status(201).json({ id: result.insertId, project_id, name, category_id });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
     }
 };
 
-// @desc    Update a channel's name
+// @desc    Update a channel's details (name)
 // @route   PUT /api/chat/channels/:channelId
 // @access  Private (Admin only)
 exports.updateChannel = async (req, res) => {
@@ -52,13 +126,29 @@ exports.updateChannel = async (req, res) => {
     }
 };
 
+// @desc    Update channel order and category
+// @route   PUT /api/chat/channels/order
+// @access  Private (Admin only)
+exports.updateChannelOrder = async (req, res) => {
+    const { channelId, categoryId, sortOrder } = req.body;
+    try {
+        await db.query(
+            'UPDATE channels SET category_id = ?, sort_order = ? WHERE id = ?',
+            [categoryId || null, sortOrder, channelId]
+        );
+        res.json({ message: 'Channel order updated successfully.' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+};
+
 // @desc    Delete a channel
 // @route   DELETE /api/chat/channels/:channelId
 // @access  Private (Admin only)
 exports.deleteChannel = async (req, res) => {
     const { channelId } = req.params;
     try {
-        // You might want to also delete all messages in this channel
         await db.query('DELETE FROM chat_messages WHERE channel_id = ?', [channelId]);
         await db.query('DELETE FROM channels WHERE id = ?', [channelId]);
         res.json({ message: 'Channel deleted successfully.' });
@@ -68,14 +158,13 @@ exports.deleteChannel = async (req, res) => {
     }
 };
 
-
 // @desc    Get all messages for a channel
 // @route   GET /api/chat/messages/:channelId
 // @access  Private
 exports.getMessages = async (req, res) => {
     try {
         const [messages] = await db.query(`
-            SELECT cm.*, u.username 
+            SELECT cm.*, u.username, u.profile_image_url, u.primary_color 
             FROM chat_messages cm
             JOIN users u ON cm.user_id = u.id
             WHERE cm.channel_id = ? 

@@ -19,7 +19,7 @@ const StagedAttachment = ({ file, url, onRemove, isUploading }) => (
     />
 );
 
-const ChatWindow = ({ channel, messages, onSendMessage, onToggleUserList, isUserListOpen }) => {
+const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteMessage, onToggleUserList, isUserListOpen }) => {
     const { user } = useContext(AuthContext);
     const [newMessage, setNewMessage] = useState('');
     const [stagedAttachment, setStagedAttachment] = useState(null);
@@ -85,7 +85,13 @@ const ChatWindow = ({ channel, messages, onSendMessage, onToggleUserList, isUser
 
             <Box sx={{ flexGrow: 1, p: 2, overflowY: 'auto' }}>
                 {messages.map((msg) => (
-                    <Message key={msg.id} msg={msg} isOwnMessage={msg.user_id === user.id} />
+                    <Message 
+                        key={msg.id} 
+                        msg={msg} 
+                        isOwnMessage={msg.user_id === user.id}
+                        onEditMessage={onEditMessage}
+                        onDeleteMessage={onDeleteMessage}
+                    />
                 ))}
                 <div ref={messagesEndRef} />
             </Box>

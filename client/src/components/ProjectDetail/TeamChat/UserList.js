@@ -1,13 +1,9 @@
 // src/components/ProjectDetail/TeamChat/UserList.js
-import React, { useContext } from 'react';
-import { Box, Typography, List, ListItem, ListItemText, ListItemIcon, Avatar, Badge, Divider } from '@mui/material';
+import React from 'react';
+import { Box, Typography, List, ListItem, ListItemText, ListItemIcon, Avatar, Badge } from '@mui/material';
 import CircleIcon from '@mui/icons-material/Circle';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import AuthContext from '../../../contexts/AuthContext';
 
-const UserList = ({ users }) => {
-    const { user: currentUser } = useContext(AuthContext);
-    
+const UserListItem = ({ user }) => {
     const stringToColor = (string) => {
         let hash = 0;
         let i;
@@ -25,7 +21,7 @@ const UserList = ({ users }) => {
     const stringAvatar = (name) => {
         return {
             sx: {
-                bgcolor: stringToColor(name || 'User'),
+                bgcolor: user.primary_color || stringToColor(name || 'User'),
                 width: 32,
                 height: 32,
                 fontSize: '0.875rem'
@@ -35,37 +31,61 @@ const UserList = ({ users }) => {
     }
 
     return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{p: 2}}>
-                <Typography variant="h6">Members ({users.length})</Typography>
-            </Box>
-            <Divider />
-            <List sx={{ flexGrow: 1, overflowY: 'auto', p: 1 }}>
-                {users.map(user => (
-                    <ListItem key={user.userId} disablePadding sx={{mb: 1}}>
-                         <ListItemIcon sx={{ minWidth: 40 }}>
-                             <Badge
-                                 overlap="circular"
-                                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                                 badgeContent={
-                                    <CircleIcon sx={{ 
-                                        color: user.role === 'admin' ? 'secondary.main' : 'success.main', 
-                                        fontSize: 12, 
-                                        border: '2px solid white', 
-                                        borderRadius: '50%' 
-                                    }} />
-                                 }
-                             >
-                                <Avatar {...stringAvatar(user.username)} />
-                             </Badge>
-                         </ListItemIcon>
-                        <ListItemText 
-                            primary={user.username} 
-                            secondary={user.userId === currentUser.id ? "You" : user.role}
-                        />
-                    </ListItem>
-                ))}
-            </List>
+         <ListItem disablePadding sx={{mb: 1}}>
+             <ListItemIcon sx={{ minWidth: 40 }}>
+                 <Badge
+                     overlap="circular"
+                     anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                     badgeContent={
+                        <CircleIcon sx={{ 
+                            color: 'success.main', 
+                            fontSize: 12, 
+                            border: '2px solid white', 
+                            borderRadius: '50%' 
+                        }} />
+                     }
+                 >
+                    <Avatar src={user.profile_image_url || ''} {...stringAvatar(user.username)} />
+                 </Badge>
+             </ListItemIcon>
+            <ListItemText 
+                primary={user.username} 
+            />
+        </ListItem>
+    )
+}
+
+const UserList = ({ users }) => {
+    const admins = users.filter(u => u.role === 'admin');
+    const members = users.filter(u => u.role !== 'admin');
+
+    return (
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 1 }}>
+            {admins.length > 0 && (
+                <>
+                    <Box sx={{ px: 1, pt: 1 }}>
+                        <Typography variant="overline" color="text.secondary">Admins — {admins.length}</Typography>
+                    </Box>
+                    <List sx={{ overflowY: 'auto', p: 1, pt: 0 }}>
+                        {admins.map(user => (
+                           <UserListItem key={user.userId} user={user} />
+                        ))}
+                    </List>
+                </>
+            )}
+
+            {members.length > 0 && (
+                <>
+                    <Box sx={{ px: 1, pt: 1 }}>
+                        <Typography variant="overline" color="text.secondary">Members — {members.length}</Typography>
+                    </Box>
+                     <List sx={{ flexGrow: 1, overflowY: 'auto', p: 1, pt: 0 }}>
+                        {members.map(user => (
+                            <UserListItem key={user.userId} user={user} />
+                        ))}
+                    </List>
+                </>
+            )}
         </Box>
     );
 };
