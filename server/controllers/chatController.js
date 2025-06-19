@@ -126,20 +126,51 @@ exports.updateChannel = async (req, res) => {
     }
 };
 
-// @desc    Update channel order and category
-// @route   PUT /api/chat/channels/order
+// @desc    Update the order and categories of all channels for a project.
+// @route   PUT /api/chat/reorder
 // @access  Private (Admin only)
-exports.updateChannelOrder = async (req, res) => {
-    const { channelId, categoryId, sortOrder } = req.body;
+exports.reorderChannels = async (req, res) => {
+    const { projectId, orderData } = req.body;
+    const connection = await db.getConnection();
+
+    if (!projectId || !Array.isArray(orderData)) {
+        return res.status(400).json({ message: 'Invalid payload.' });
+    }
+
     try {
-        await db.query(
-            'UPDATE channels SET category_id = ?, sort_order = ? WHERE id = ?',
-            [categoryId || null, sortOrder, channelId]
-        );
+        await connection.beginTransaction();
+
+        const updatePromises = [];
+
+        for (const category of orderData) {
+            // Ensure categoryId is a valid value (or null)
+            const categoryId = category.categoryId ? parseInt(category.categoryId, 10) : null;
+            if (isNaN(categoryId) && categoryId !== null) continue; // Skip if categoryId is invalid
+
+            for (let i = 0; i < category.channels.length; i++) {
+                const channelId = category.channels[i];
+                const sortOrder = i;
+                
+                const promise = connection.query(
+                    'UPDATE channels SET category_id = ?, sort_order = ? WHERE id = ? AND project_id = ?',
+                    [categoryId, sortOrder, channelId, projectId]
+                );
+                updatePromises.push(promise);
+            }
+        }
+        
+        // Wait for all update queries to complete
+        await Promise.all(updatePromises);
+
+        await connection.commit();
         res.json({ message: 'Channel order updated successfully.' });
+
     } catch (err) {
-        console.error(err.message);
+        await connection.rollback();
+        console.error("Error in reorderChannels:", err.message);
         res.status(500).send('Server Error');
+    } finally {
+        if (connection) connection.release();
     }
 };
 

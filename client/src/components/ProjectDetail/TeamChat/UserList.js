@@ -1,7 +1,8 @@
 // src/components/ProjectDetail/TeamChat/UserList.js
 import React from 'react';
-import { Box, Typography, List, ListItem, ListItemText, ListItemIcon, Avatar, Badge } from '@mui/material';
+import { Box, Typography, List, ListItem, ListItemText, ListItemIcon, Avatar, Badge, Divider, Tooltip } from '@mui/material';
 import CircleIcon from '@mui/icons-material/Circle';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'; // Import admin icon
 
 const UserListItem = ({ user }) => {
     const stringToColor = (string) => {
@@ -49,7 +50,17 @@ const UserListItem = ({ user }) => {
                  </Badge>
              </ListItemIcon>
             <ListItemText 
-                primary={user.username} 
+                primary={
+                    // CHANGE: Added a Box to display the username and admin icon together
+                    <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                        {user.username}
+                        {user.role === 'admin' && (
+                            <Tooltip title="Admin">
+                                <AdminPanelSettingsIcon color="primary" sx={{ ml: 0.5, fontSize: '1rem' }} />
+                            </Tooltip>
+                        )}
+                    </Box>
+                } 
             />
         </ListItem>
     )
@@ -59,13 +70,16 @@ const UserList = ({ users }) => {
     const admins = users.filter(u => u.role === 'admin');
     const members = users.filter(u => u.role !== 'admin');
 
+    // CHANGE: Increased padding on the root Box from p:1 to p:2 for better spacing
     return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 1 }}>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 2 }}>
             {admins.length > 0 && (
                 <>
                     <Box sx={{ px: 1, pt: 1 }}>
                         <Typography variant="overline" color="text.secondary">Admins — {admins.length}</Typography>
                     </Box>
+                    {/* CHANGE: Added a Divider below the "Admins" header */}
+                    <Divider sx={{ my: 1 }} />
                     <List sx={{ overflowY: 'auto', p: 1, pt: 0 }}>
                         {admins.map(user => (
                            <UserListItem key={user.userId} user={user} />
@@ -79,6 +93,8 @@ const UserList = ({ users }) => {
                     <Box sx={{ px: 1, pt: 1 }}>
                         <Typography variant="overline" color="text.secondary">Members — {members.length}</Typography>
                     </Box>
+                     {/* CHANGE: Added a Divider below the "Members" header */}
+                    <Divider sx={{ my: 1 }} />
                      <List sx={{ flexGrow: 1, overflowY: 'auto', p: 1, pt: 0 }}>
                         {members.map(user => (
                             <UserListItem key={user.userId} user={user} />

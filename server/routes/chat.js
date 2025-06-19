@@ -12,7 +12,7 @@ const {
     createCategory,
     updateCategory,
     deleteCategory,
-    updateChannelOrder
+    reorderChannels // Changed from updateChannelOrder
 } = require('../controllers/chatController');
 const { protect, isAdmin } = require('../middleware/authMiddleware');
 
@@ -57,7 +57,7 @@ router.get('/channels/:projectId', getChannels);
 router.post('/channels', isAdmin, createChannel);
 router.put('/channels/:channelId', isAdmin, updateChannel);
 router.delete('/channels/:channelId', isAdmin, deleteChannel);
-router.put('/channels/order', isAdmin, updateChannelOrder);
+router.put('/reorder', isAdmin, reorderChannels); // Changed this line
 
 // Message Routes
 router.get('/messages/:channelId', getMessages);
