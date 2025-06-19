@@ -1,6 +1,40 @@
 // server/controllers/chatController.js
 const db = require('../db');
 
+// @desc    Update the sort order of all categories for a project.
+// @route   PUT /api/chat/categories/reorder
+// @access  Private (Admin only)
+exports.reorderCategories = async (req, res) => {
+    const { projectId, orderedCategoryIds } = req.body;
+    if (!projectId || !Array.isArray(orderedCategoryIds)) {
+        return res.status(400).json({ message: 'Invalid payload.' });
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const updatePromises = orderedCategoryIds.map((categoryId, index) => {
+            return connection.query(
+                'UPDATE channel_categories SET sort_order = ? WHERE id = ? AND project_id = ?',
+                [index, categoryId, projectId]
+            );
+        });
+        
+        await Promise.all(updatePromises);
+
+        await connection.commit();
+        res.json({ message: 'Category order updated successfully.' });
+
+    } catch (err) {
+        await connection.rollback();
+        console.error("Error in reorderCategories:", err.message);
+        res.status(500).send('Server Error');
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
 // --- Category Controllers ---
 
 // @desc    Create a new channel category

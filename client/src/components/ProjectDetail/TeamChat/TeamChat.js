@@ -8,7 +8,7 @@ import ChatWindow from './ChatWindow';
 import ChannelList from './ChannelList';
 import UserList from './UserList';
 
-const TeamChat = ({ projectId }) => {
+const TeamChat = ({ projectId, onPing }) => { // Add onPing prop
     const [currentChannel, setCurrentChannel] = useState(null);
     const [messages, setMessages] = useState([]);
     const [onlineUsers, setOnlineUsers] = useState([]);
@@ -48,6 +48,16 @@ const TeamChat = ({ projectId }) => {
         if (!projectId || !user) return;
         
         socket.emit('joinProject', { projectId, user });
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                socket.emit('userInactive');
+            } else {
+                socket.emit('userActive');
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         
         const receiveMessageListener = (newMessage) => {
             if (newMessage.channel_id === currentChannel?.id) {
@@ -67,29 +77,44 @@ const TeamChat = ({ projectId }) => {
             }
         };
         const usersListener = (users) => setOnlineUsers(users);
+        const pingListener = ({ channelId }) => {
+            if (channelId !== currentChannel?.id) {
+                onPing(channelId);
+            }
+        };
         
         socket.on('receiveMessage', receiveMessageListener);
         socket.on('messageEdited', messageEditedListener);
         socket.on('messageDeleted', messageDeletedListener);
         socket.on('updateOnlineUsers', usersListener);
+        socket.on('receivePing', pingListener);
 
         return () => {
             socket.off('receiveMessage', receiveMessageListener);
             socket.off('messageEdited', messageEditedListener);
             socket.off('messageDeleted', messageDeletedListener);
             socket.off('updateOnlineUsers', usersListener);
+            socket.off('receivePing', pingListener);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            socket.emit('userInactive');
         };
-    }, [projectId, user, currentChannel]);
+    }, [projectId, user, currentChannel, onPing]);
 
     const handleSendMessage = (messageText, attachmentUrl) => {
-        if ((!messageText || !messageText.trim()) && (!attachmentUrl || !attachmentUrl.trim())) return;
+        const hasText = messageText && messageText.trim() !== '';
+        const hasAttachment = attachmentUrl && attachmentUrl.trim() !== '';
+        if (!hasText && !hasAttachment) return;
         
+        const mentionRegex = /@(\w+)/g;
+        const mentions = [...messageText.matchAll(mentionRegex)].map(match => match[1]);
+
         socket.emit('sendMessage', {
             projectId,
             channelId: currentChannel.id,
             userId: user.id,
             message: messageText,
             attachment_url: attachmentUrl,
+            mentions: [...new Set(mentions)] // Send unique mentions
         });
     };
     

@@ -237,32 +237,44 @@ const ChannelList = ({ projectId, onSelectChannel, currentChannel }) => {
         }
     };
     
-    const onDragEnd = (result) => {
-        const { source, destination } = result;
+const onDragEnd = (result) => {
+        const { source, destination, type } = result;
         if (!destination) return;
-
-        const newCategories = JSON.parse(JSON.stringify(categories));
-        const sourceCat = newCategories.find(c => String(c.id) === source.droppableId);
-        const destCat = newCategories.find(c => String(c.id) === destination.droppableId);
-        if (!sourceCat || !destCat) return;
-
-        const [movedChannel] = sourceCat.channels.splice(source.index, 1);
-        destCat.channels.splice(destination.index, 0, movedChannel);
         
-        setCategories(newCategories);
-
-        const orderData = newCategories.map(cat => ({
-            categoryId: cat.id,
-            channels: cat.channels.map(chan => chan.id),
-        }));
-        
-        api.put('/chat/reorder', { projectId, orderData })
-            .catch(err => {
-                console.error("Failed to update channel order:", err);
-                fetchData();
+        if (type === 'category') {
+            const newCategories = Array.from(categories);
+            const [movedCategory] = newCategories.splice(source.index, 1);
+            newCategories.splice(destination.index, 0, movedCategory);
+            setCategories(newCategories);
+            api.put('/chat/categories/reorder', {
+                projectId,
+                orderedCategoryIds: newCategories.map(c => c.id)
+            }).catch(err => {
+                console.error("Failed to update category order:", err);
+                fetchData(); // Revert on error
             });
-    };
+            return;
+        }
 
+        if (type === 'channel') {
+            const newCategories = JSON.parse(JSON.stringify(categories));
+            const sourceCat = newCategories.find(c => String(c.id) === source.droppableId);
+            const destCat = newCategories.find(c => String(c.id) === destination.droppableId);
+            if (!sourceCat || !destCat) return;
+
+            const [movedChannel] = sourceCat.channels.splice(source.index, 1);
+            destCat.channels.splice(destination.index, 0, movedChannel);
+            setCategories(newCategories);
+
+            const orderData = newCategories.map(cat => ({
+                categoryId: cat.id,
+                channels: cat.channels.map(chan => chan.id),
+            }));
+            api.put('/chat/reorder', { projectId, orderData })
+               .catch(err => { console.error("Failed to update channel order:", err); fetchData(); });
+        }
+    };
+    
     if (loading) return <Box sx={{display: 'flex', justifyContent: 'center', p: 2}}><CircularProgress size={30} /></Box>;
     if (error) return <Alert severity="error">{error}</Alert>;
 
@@ -278,26 +290,38 @@ const ChannelList = ({ projectId, onSelectChannel, currentChannel }) => {
             </Box>
             <Divider />
             <DragDropContext onDragEnd={onDragEnd}>
-                <Box sx={{flexGrow: 1, overflowY: 'auto', mt: 1}}>
-                    {categories.length > 0 ? categories.map(category => (
-                        <CategorySection 
-                            key={category.id}
-                            category={category}
-                            channels={category.channels}
-                            currentChannelId={currentChannel?.id}
-                            onSelectChannel={onSelectChannel}
-                            onAddChannel={handleOpenCreateChannel}
-                            onEditChannel={handleOpenEditChannel}
-                            onDeleteChannel={handleDeleteChannel}
-                            onEditCategory={handleOpenEditCategory}
-                            onDeleteCategory={handleDeleteCategory}
-                        />
-                    )) : (
-                        <Typography sx={{p: 2, textAlign: 'center', color: 'text.secondary'}}>
-                            No categories created yet.
-                        </Typography>
+                <Droppable droppableId="all-categories" type="category">
+                    {(provided) => (
+                        <Box {...provided.droppableProps} ref={provided.innerRef} sx={{flexGrow: 1, overflowY: 'auto', mt: 1}}>
+                            {categories.length > 0 ? categories.map((category, index) => (
+                                <Draggable key={category.id} draggableId={`category-${category.id}`} index={index}>
+                                    {(provided, snapshot) => (
+                                        <Box ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+                                            <CategorySection 
+                                                category={category}
+                                                channels={category.channels}
+                                                currentChannelId={currentChannel?.id}
+                                                onSelectChannel={onSelectChannel}
+                                                onAddChannel={handleOpenCreateChannel}
+                                                onEditChannel={handleOpenEditChannel}
+                                                onDeleteChannel={handleDeleteChannel}
+                                                onEditCategory={handleOpenEditCategory}
+                                                onDeleteCategory={handleDeleteCategory}
+                                                dragHandleProps={provided.dragHandleProps}
+                                                isDragging={snapshot.isDragging}
+                                            />
+                                        </Box>
+                                    )}
+                                </Draggable>
+                            )) : (
+                                <Typography sx={{p: 2, textAlign: 'center', color: 'text.secondary'}}>
+                                    No categories created yet.
+                                </Typography>
+                            )}
+                            {provided.placeholder}
+                        </Box>
                     )}
-                </Box>
+                </Droppable>
             </DragDropContext>
             
             <CategoryModal open={isCategoryModalOpen} onClose={handleCloseCategoryModal} onSave={handleSaveCategory} category={editingCategory} />
