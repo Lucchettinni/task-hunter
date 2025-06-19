@@ -4,8 +4,46 @@ const db = require('../db');
 module.exports = function (io) {
     let onlineUsersByProject = {};
 
-    const getProjectUsers = (projectId) => {
-        if (!onlineUsersByProject[projectId]) return [];
+    const getProjectUsers = async (projectId) => {
+        if (!onlineUsersByProject[projectId]) {
+            onlineUsersByProject[projectId] = {};
+        }
+
+        try {
+            const [usersFromDb] = await db.query(
+                `SELECT u.id, u.username, u.role, u.profile_image_url, u.primary_color 
+                 FROM users u 
+                 JOIN project_users pu ON u.id = pu.user_id 
+                 WHERE pu.project_id = ?`,
+                [projectId]
+            );
+
+            // Update the status of currently online users, and add any missing users as offline
+            const currentOnlineIds = new Set(Object.keys(onlineUsersByProject[projectId]).map(id => parseInt(id, 10)));
+
+            for (const user of usersFromDb) {
+                if (onlineUsersByProject[projectId][user.id]) {
+                    // User is in our list, ensure their status is current
+                    // (This is mostly redundant as status is set on connect/disconnect, but good for safety)
+                } else {
+                    // User is in the project but not in our 'online' list, so add them as offline
+                    onlineUsersByProject[projectId][user.id] = { ...user, status: 'offline' };
+                }
+            }
+            
+            // Additionally, ensure no one who left the project is still in the online list.
+            const dbUserIds = new Set(usersFromDb.map(u => u.id));
+            for (const onlineUserId of currentOnlineIds) {
+                if (!dbUserIds.has(onlineUserId)) {
+                    delete onlineUsersByProject[projectId][onlineUserId];
+                }
+            }
+
+
+        } catch (error) {
+            console.error("Error fetching project users for socket list:", error);
+        }
+
         return Object.values(onlineUsersByProject[projectId]).map(({ socketId, ...user }) => user);
     };
 
@@ -13,7 +51,7 @@ module.exports = function (io) {
         let currentProjectId = null;
         let currentUserId = null;
 
-        socket.on('joinProject', ({ projectId, user }) => {
+        socket.on('joinProject', async ({ projectId, user }) => {
             if (!user || !user.id) return;
 
             socket.join(projectId);
@@ -25,13 +63,17 @@ module.exports = function (io) {
             }
             onlineUsersByProject[projectId][user.id] = { ...user, socketId: socket.id, status: 'online' };
             
-            io.to(projectId).emit('updateOnlineUsers', getProjectUsers(projectId));
+            // Now fetch all users to ensure the list is complete, then emit
+            const allProjectUsers = await getProjectUsers(projectId);
+            io.to(projectId).emit('updateOnlineUsers', allProjectUsers);
         });
 
         const updateUserStatus = (status) => {
             if (currentProjectId && currentUserId && onlineUsersByProject[currentProjectId]?.[currentUserId]) {
                 onlineUsersByProject[currentProjectId][currentUserId].status = status;
-                io.to(currentProjectId).emit('updateOnlineUsers', getProjectUsers(currentProjectId));
+                getProjectUsers(currentProjectId).then(users => {
+                     io.to(currentProjectId).emit('updateOnlineUsers', users);
+                });
             }
         };
         
@@ -57,10 +99,14 @@ module.exports = function (io) {
                 io.to(projectId).emit('receiveMessage', finalMessage);
                 
                 if (mentions && mentions.length > 0 && onlineUsersByProject[projectId]) {
+                    const onlineUsers = await getProjectUsers(projectId);
                     mentions.forEach(mentionedUsername => {
-                        const targetUser = Object.values(onlineUsersByProject[projectId]).find(u => u.username === mentionedUsername);
-                        if (targetUser && targetUser.id !== userId) {
-                            io.to(targetUser.socketId).emit('receivePing', { channelId: finalMessage.channel_id, messageId: finalMessage.id });
+                         const targetUser = onlineUsers.find(u => u.username === mentionedUsername);
+                         if (targetUser && onlineUsersByProject[projectId][targetUser.id] && targetUser.id !== userId) {
+                            const targetSocketId = onlineUsersByProject[projectId][targetUser.id].socketId;
+                            if (targetSocketId) {
+                                io.to(targetSocketId).emit('receivePing', { channelId: finalMessage.channel_id, messageId: finalMessage.id });
+                            }
                         }
                     });
                 }
@@ -110,16 +156,8 @@ module.exports = function (io) {
         });
         
         socket.on('disconnect', () => {
-            if (currentProjectId && currentUserId && onlineUsersByProject[currentProjectId]?.[currentUserId]) {
-                onlineUsersByProject[currentProjectId][currentUserId].status = 'offline';
-                io.to(currentProjectId).emit('updateOnlineUsers', getProjectUsers(currentProjectId));
-                // Optionally remove the user after a delay
-                setTimeout(() => {
-                    if (onlineUsersByProject[currentProjectId]?.[currentUserId]?.status === 'offline') {
-                        delete onlineUsersByProject[currentProjectId][currentUserId];
-                        io.to(currentProjectId).emit('updateOnlineUsers', getProjectUsers(currentProjectId));
-                    }
-                }, 60000); // 1 minute
+            if (currentProjectId && currentUserId) {
+                updateUserStatus('offline');
             }
         });
     });

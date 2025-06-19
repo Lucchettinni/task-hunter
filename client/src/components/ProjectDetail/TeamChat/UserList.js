@@ -85,8 +85,15 @@ const UserListItem = ({ user }) => {
 };
 
 const UserList = ({ users }) => {
-    const admins = users.filter(u => u.role === 'admin');
-    const members = users.filter(u => u.role !== 'admin');
+    
+    // Sort users by status: online > away > offline
+    const sortedUsers = [...users].sort((a, b) => {
+        const statusOrder = { online: 0, away: 1, offline: 2 };
+        return (statusOrder[a.status] || 2) - (statusOrder[b.status] || 2);
+    });
+    
+    const admins = sortedUsers.filter(u => u.role === 'admin');
+    const members = sortedUsers.filter(u => u.role !== 'admin');
 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 2, bgcolor: 'background.paper' }}>
