@@ -1,4 +1,4 @@
-// src/components/ProjectDetail/Admin/ManageUsersTab.js
+// client/src/components/ProjectDetail/Admin/ManageUsersTab.js
 import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { Box, Typography, Autocomplete, TextField, Button, Alert, CircularProgress, Paper, List, ListItem, ListItemAvatar, Avatar, ListItemText, IconButton, Divider, Tooltip } from '@mui/material';
 import api from '../../../services/api';
@@ -116,7 +116,13 @@ const ManageUsersTab = ({ projectId }) => {
                                 }
                             >
                                 <ListItemAvatar>
-                                    <Avatar sx={{ bgcolor: user.role === 'admin' ? 'secondary.main' : 'primary.main' }}>
+                                    {/* MODIFICATION: 
+                                        Add the `src` prop to the Avatar to display the profile image.
+                                    */}
+                                    <Avatar 
+                                        src={user.profile_image_url || ''}
+                                        sx={{  bgcolor: user.primary_color || (user.role === 'admin' ? 'secondary.main' : 'primary.main') }}
+                                    >
                                         {user.username.charAt(0).toUpperCase()}
                                     </Avatar>
                                 </ListItemAvatar>

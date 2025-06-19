@@ -1,10 +1,7 @@
-// src/components/ProjectDetail/TeamChat/UserList.js
 import React from 'react';
 import { Box, Typography, List, ListItem, ListItemText, ListItemIcon, Avatar, Badge, Divider, Tooltip } from '@mui/material';
 import CircleIcon from '@mui/icons-material/Circle';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-
-const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const UserListItem = ({ user }) => {
     const stringToColor = (string) => {
@@ -32,9 +29,6 @@ const UserListItem = ({ user }) => {
             children: `${(name || 'U').charAt(0).toUpperCase()}`,
         };
     };
-    
-    // CHANGE: Conditionally create the full image URL by prepending the backend address.
-    const fullImageUrl = user.profile_image_url ? `${BACKEND_URL}${user.profile_image_url}` : '';
 
     return (
          <ListItem disablePadding sx={{mb: 1}}>
@@ -51,8 +45,10 @@ const UserListItem = ({ user }) => {
                         }} />
                      }
                  >
-                    {/* CHANGE: The Avatar now uses the corrected fullImageUrl. */}
-                    <Avatar src={fullImageUrl} {...stringAvatar(user.username)} />
+                    {/* MODIFICATION: 
+                        The Avatar now uses the profile_image_url directly, as it's a full link.
+                    */}
+                    <Avatar src={user.profile_image_url || ''} {...stringAvatar(user.username)} />
                  </Badge>
              </ListItemIcon>
             <ListItemText 

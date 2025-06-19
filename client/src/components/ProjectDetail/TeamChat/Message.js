@@ -1,4 +1,4 @@
-// src/components/ProjectDetail/TeamChat/Message.js
+// client/src/components/ProjectDetail/TeamChat/Message.js
 import React, { useState, useContext } from 'react';
 import { Box, Paper, Typography, Link, Avatar, useTheme, IconButton, Menu, MenuItem, TextField, Button, Tooltip } from '@mui/material';
 import FilePresentIcon from '@mui/icons-material/FilePresent';
@@ -99,13 +99,16 @@ const Message = ({ msg, onEditMessage, onDeleteMessage }) => {
                     <Typography variant="caption" sx={{ color: 'text.secondary'}}>
                         {time}
                     </Typography>
-                    {msg.is_edited && (
+                    {/* MODIFICATION: 
+                        Use a ternary operator or Boolean() to prevent '0' from rendering. 
+                    */}
+                    {msg.is_edited ? (
                         <Tooltip title="Edited">
                             <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
                                 (edited)
                             </Typography>
                         </Tooltip>
-                    )}
+                    ) : null}
                 </Box>
                 
                 {isEditing ? (

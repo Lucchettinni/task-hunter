@@ -34,7 +34,8 @@ const TeamChat = ({ projectId }) => {
     useEffect(() => {
         if (!projectId || !user) return;
         
-        socket.emit('joinProject', { projectId, userId: user.id, username: user.username });
+        // **MODIFICATION: Send the entire user object, not just parts of it.**
+        socket.emit('joinProject', { projectId, user });
         
         const receiveMessageListener = (newMessage) => {
             if (newMessage.channel_id === currentChannel?.id) {

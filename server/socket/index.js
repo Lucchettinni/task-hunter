@@ -2,34 +2,35 @@
 const db = require('../db');
 
 module.exports = function (io) {
-    // Structure: { projectId: { userId: { socketId: '...', username: '...' } } }
+    // Structure will now be: { projectId: { userId: { socketId: '...', ...fullUserObject } } }
     let onlineUsersByProject = {};
 
+    // **MODIFICATION: This function now returns the full user objects.**
     const getProjectUsers = (projectId) => {
         if (!onlineUsersByProject[projectId]) return [];
-        // Return an array of { userId, username }
-        return Object.entries(onlineUsersByProject[projectId]).map(([userId, data]) => ({
-            userId,
-            username: data.username,
-        }));
+        // Return an array of user objects, excluding their socketId.
+        return Object.values(onlineUsersByProject[projectId]).map(({ socketId, ...user }) => user);
     };
 
     io.on('connection', (socket) => {
         let currentProjectId = null;
         let currentUserId = null;
 
-        // User joins a project room
-        socket.on('joinProject', ({ projectId, userId, username }) => {
+        // **MODIFICATION: The 'joinProject' handler now expects a full 'user' object.**
+        socket.on('joinProject', ({ projectId, user }) => {
+            if (!user || !user.id) return; // Guard against incomplete data
+
             socket.join(projectId);
             currentProjectId = projectId;
-            currentUserId = userId;
+            currentUserId = user.id;
 
             if (!onlineUsersByProject[projectId]) {
                 onlineUsersByProject[projectId] = {};
             }
-            onlineUsersByProject[projectId][userId] = { socketId: socket.id, username };
+            // Store the full user object along with their socket ID
+            onlineUsersByProject[projectId][user.id] = { ...user, socketId: socket.id };
             
-            // Broadcast updated user list to the project room
+            // Broadcast the updated, complete list of online users to the project room
             io.to(projectId).emit('updateOnlineUsers', getProjectUsers(projectId));
         });
 
@@ -130,6 +131,7 @@ module.exports = function (io) {
             }
         });
         
+        // **MODIFICATION: The disconnect handler logic is correct and needs no changes.**
         socket.on('disconnect', () => {
             if (currentProjectId && currentUserId) {
                 const projectUsers = onlineUsersByProject[currentProjectId];
