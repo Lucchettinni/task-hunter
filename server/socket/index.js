@@ -18,27 +18,20 @@ module.exports = function (io) {
                 [projectId]
             );
 
-            // Update the status of currently online users, and add any missing users as offline
             const currentOnlineIds = new Set(Object.keys(onlineUsersByProject[projectId]).map(id => parseInt(id, 10)));
 
             for (const user of usersFromDb) {
-                if (onlineUsersByProject[projectId][user.id]) {
-                    // User is in our list, ensure their status is current
-                    // (This is mostly redundant as status is set on connect/disconnect, but good for safety)
-                } else {
-                    // User is in the project but not in our 'online' list, so add them as offline
+                if (!onlineUsersByProject[projectId][user.id]) {
                     onlineUsersByProject[projectId][user.id] = { ...user, status: 'offline' };
                 }
             }
             
-            // Additionally, ensure no one who left the project is still in the online list.
             const dbUserIds = new Set(usersFromDb.map(u => u.id));
             for (const onlineUserId of currentOnlineIds) {
                 if (!dbUserIds.has(onlineUserId)) {
                     delete onlineUsersByProject[projectId][onlineUserId];
                 }
             }
-
 
         } catch (error) {
             console.error("Error fetching project users for socket list:", error);
@@ -63,7 +56,6 @@ module.exports = function (io) {
             }
             onlineUsersByProject[projectId][user.id] = { ...user, socketId: socket.id, status: 'online' };
             
-            // Now fetch all users to ensure the list is complete, then emit
             const allProjectUsers = await getProjectUsers(projectId);
             io.to(projectId).emit('updateOnlineUsers', allProjectUsers);
         });
@@ -144,14 +136,25 @@ module.exports = function (io) {
             try {
                 const [messagesToDelete] = await db.query('SELECT * FROM chat_messages WHERE id = ? AND user_id = ?', [messageId, userId]);
                 if (messagesToDelete.length === 0) return;
+
+                const messageToDelete = messagesToDelete[0];
                 
+                // FIX: Archive the message by explicitly mapping properties to prevent errors.
                 await db.query(
                     'INSERT INTO deleted_messages (original_message_id, channel_id, user_id, message, attachment_url, original_created_at, deleted_by_user_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    [...Object.values(messagesToDelete[0]), userId]
+                    [
+                        messageToDelete.id,
+                        messageToDelete.channel_id,
+                        messageToDelete.user_id, // The original author's ID
+                        messageToDelete.message,
+                        messageToDelete.attachment_url,
+                        messageToDelete.created_at,
+                        userId // The ID of the user performing the deletion
+                    ]
                 );
                 
                 await db.query('DELETE FROM chat_messages WHERE id = ?', [messageId]);
-                io.to(projectId).emit('messageDeleted', { messageId, channelId: messagesToDelete[0].channel_id });
+                io.to(projectId).emit('messageDeleted', { messageId, channelId: messageToDelete.channel_id });
             } catch (error) { console.error('Error deleting message:', error); }
         });
         

@@ -7,7 +7,11 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AuthContext from '../../../contexts/AuthContext';
 
+// Helper functions to identify file types
 const isImage = (url) => /\.(jpg|jpeg|png|gif)$/i.test(url);
+const isVideo = (url) => /\.(mp4|webm|ogv|mov)$/i.test(url);
+const isAudio = (url) => /\.(mp3|wav|ogg|aac)$/i.test(url);
+
 const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const Attachment = ({ url }) => {
@@ -17,15 +21,34 @@ const Attachment = ({ url }) => {
     if (isImage(url)) {
         return (
             <Link href={fullUrl} target="_blank" rel="noopener noreferrer" sx={{ display: 'block', mt: 1 }}>
-                <img src={fullUrl} alt="attachment" style={{ maxWidth: '250px', maxHeight: '250px', borderRadius: '12px', objectFit: 'cover' }} />
+                <img src={fullUrl} alt="attachment" style={{ maxWidth: '300px', maxHeight: '250px', borderRadius: '12px', objectFit: 'cover' }} />
             </Link>
         );
     }
     
+    // FIX: Add video player rendering
+    if (isVideo(url)) {
+        return (
+            <video controls src={fullUrl} style={{ maxWidth: '300px', maxHeight: '250px', borderRadius: '12px', marginTop: '8px' }}>
+                Your browser does not support the video tag.
+            </video>
+        );
+    }
+
+    // FIX: Add audio player rendering
+    if (isAudio(url)) {
+        return (
+            <audio controls src={fullUrl} style={{ width: '300px', marginTop: '8px' }}>
+                Your browser does not support the audio element.
+            </audio>
+        );
+    }
+    
+    // Fallback for other file types
     return (
-        <Paper variant="outlined" sx={{ mt: 1, p: 1.5, display: 'flex', alignItems: 'center', gap: 1, borderRadius: '12px' }}>
+        <Paper variant="outlined" sx={{ mt: 1, p: 1.5, display: 'flex', alignItems: 'center', gap: 1, borderRadius: '12px', maxWidth: '300px' }}>
             <FilePresentIcon color="action" />
-            <Link href={fullUrl} target="_blank" rel="noopener noreferrer" underline="hover" sx={{ flexGrow: 1 }}>
+            <Link href={fullUrl} target="_blank" rel="noopener noreferrer" underline="hover" sx={{ flexGrow: 1, wordBreak: 'break-all' }}>
                 {filename}
             </Link>
         </Paper>
@@ -78,7 +101,7 @@ const Message = ({ msg, onEditMessage, onDeleteMessage }) => {
             justifyContent: 'flex-start',
             mb: 2,
             gap: 1.5,
-            p: 1, // Add some padding for the hover effect
+            p: 1,
             borderRadius: 2,
             transition: 'background-color 0.2s',
             '&:hover': {
@@ -99,16 +122,13 @@ const Message = ({ msg, onEditMessage, onDeleteMessage }) => {
                     <Typography variant="caption" sx={{ color: 'text.secondary'}}>
                         {time}
                     </Typography>
-                    {/* MODIFICATION: 
-                        Use a ternary operator or Boolean() to prevent '0' from rendering. 
-                    */}
-                    {msg.is_edited ? (
+                    {Boolean(msg.is_edited) && (
                         <Tooltip title="Edited">
                             <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
                                 (edited)
                             </Typography>
                         </Tooltip>
-                    ) : null}
+                    )}
                 </Box>
                 
                 {isEditing ? (
