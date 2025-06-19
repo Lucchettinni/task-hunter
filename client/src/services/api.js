@@ -42,6 +42,7 @@ axiosInstance.interceptors.response.use(
 
 const api = {
     ...axiosInstance, // Keep original axios methods
+    getMessagesPaginated: (channelId, page = 1) => axiosInstance.get(`/chat/messages/${channelId}?page=${page}`),
     updateUserProfile: (data) => axiosInstance.put('/users/profile', data),
     updateUserPassword: (data) => axiosInstance.put('/users/password', data),
     updateUserTheme: (data) => axiosInstance.put('/users/theme', data),

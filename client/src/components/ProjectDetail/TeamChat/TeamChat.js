@@ -13,28 +13,40 @@ const TeamChat = ({ projectId }) => {
     const [messages, setMessages] = useState([]);
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [loadingMessages, setLoadingMessages] = useState(false);
+    const [messagePage, setMessagePage] = useState(1);
+    const [hasMoreMessages, setHasMoreMessages] = useState(true);
     const { user } = useContext(AuthContext);
 
     const [isUserListOpen, setIsUserListOpen] = useState(true);
     
+    const fetchMessages = useCallback(async (channelId, page) => {
+        setLoadingMessages(true);
+        try {
+            const { data } = await api.get(`/chat/messages/${channelId}?page=${page}&limit=30`);
+            setMessages(prev => (page === 1 ? data.messages : [...data.messages, ...prev]));
+            setHasMoreMessages(data.hasMore);
+            setMessagePage(page + 1);
+        } catch (err) {
+            console.error("Failed to fetch messages", err);
+        } finally {
+            setLoadingMessages(false);
+        }
+    }, []);
+
     useEffect(() => {
-        // When a new channel is selected, fetch its messages
         if (currentChannel) {
-            setLoadingMessages(true);
+            setMessagePage(1);
+            setHasMoreMessages(true);
             setMessages([]);
-            api.get(`/chat/messages/${currentChannel.id}`)
-                .then(res => setMessages(res.data))
-                .catch(err => console.error("Failed to fetch messages", err))
-                .finally(() => setLoadingMessages(false));
+            fetchMessages(currentChannel.id, 1);
         } else {
             setMessages([]);
         }
-    }, [currentChannel]);
+    }, [currentChannel, fetchMessages]);
 
     useEffect(() => {
         if (!projectId || !user) return;
         
-        // **MODIFICATION: Send the entire user object, not just parts of it.**
         socket.emit('joinProject', { projectId, user });
         
         const receiveMessageListener = (newMessage) => {
@@ -88,6 +100,12 @@ const TeamChat = ({ projectId }) => {
     const handleDeleteMessage = (messageId) => {
         socket.emit('deleteMessage', { messageId, userId: user.id, projectId });
     };
+    
+    const loadMoreMessages = () => {
+        if (!loadingMessages && hasMoreMessages) {
+            fetchMessages(currentChannel.id, messagePage);
+        }
+    };
 
     return (
         <Paper elevation={3} sx={{ height: 'calc(100vh - 220px)', width: '100%', display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
@@ -111,6 +129,8 @@ const TeamChat = ({ projectId }) => {
                         onDeleteMessage={handleDeleteMessage}
                         onToggleUserList={() => setIsUserListOpen(!isUserListOpen)}
                         isUserListOpen={isUserListOpen}
+                        hasMoreMessages={hasMoreMessages}
+                        onLoadMore={loadMoreMessages}
                     />
                 ) : (
                     <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>

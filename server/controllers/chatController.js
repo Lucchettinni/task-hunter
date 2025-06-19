@@ -193,15 +193,29 @@ exports.deleteChannel = async (req, res) => {
 // @route   GET /api/chat/messages/:channelId
 // @access  Private
 exports.getMessages = async (req, res) => {
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 30;
+    const offset = (page - 1) * limit;
+
     try {
+        const [[{ total }]] = await db.query('SELECT COUNT(*) as total FROM chat_messages WHERE channel_id = ?', [req.params.channelId]);
+
         const [messages] = await db.query(`
             SELECT cm.*, u.username, u.profile_image_url, u.primary_color 
             FROM chat_messages cm
             JOIN users u ON cm.user_id = u.id
             WHERE cm.channel_id = ? 
-            ORDER BY cm.created_at ASC
-        `, [req.params.channelId]);
-        res.json(messages);
+            ORDER BY cm.created_at DESC
+            LIMIT ?
+            OFFSET ?
+        `, [req.params.channelId, limit, offset]);
+        
+        // Reverse to show oldest first for infinite scroll from top
+        res.json({
+            messages: messages.reverse(),
+            currentPage: page,
+            hasMore: (page * limit) < total
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

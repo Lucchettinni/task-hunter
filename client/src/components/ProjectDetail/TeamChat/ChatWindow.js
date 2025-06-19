@@ -1,5 +1,5 @@
 // client/src/components/ProjectDetail/TeamChat/ChatWindow.js
-import React, { useState, useRef, useEffect, useContext } from 'react';
+import React, { useState, useRef, useEffect, useContext, useLayoutEffect, useCallback } from 'react';
 import { Box, TextField, IconButton, Paper, Typography, CircularProgress, Chip, Alert, Tooltip } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
@@ -19,13 +19,14 @@ const StagedAttachment = ({ file, url, onRemove, isUploading }) => (
     />
 );
 
-const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteMessage, onToggleUserList, isUserListOpen }) => {
+const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteMessage, onToggleUserList, isUserListOpen, hasMoreMessages, onLoadMore, loading }) => {
     const { user } = useContext(AuthContext);
     const [newMessage, setNewMessage] = useState('');
     const [stagedAttachment, setStagedAttachment] = useState(null);
     const [uploadError, setUploadError] = useState('');
-    const messagesEndRef = useRef(null);
+    const messageContainerRef = useRef(null);
     const fileInputRef = useRef(null);
+    const scrollHeightBeforeLoadRef = useRef(null);
 
     useEffect(() => {
         setNewMessage('');
@@ -33,8 +34,48 @@ const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteM
         setUploadError('');
     }, [channel]);
 
-    const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    useEffect(scrollToBottom, [messages]);
+    useLayoutEffect(() => {
+        const container = messageContainerRef.current;
+        if (!container) return;
+
+        if (scrollHeightBeforeLoadRef.current !== null) {
+            // We have just loaded more messages.
+            // Restore the scroll position to keep the user's view stable.
+            container.scrollTop = container.scrollHeight - scrollHeightBeforeLoadRef.current;
+            scrollHeightBeforeLoadRef.current = null; // Reset for the next load.
+        } else {
+            // This runs on initial load or when a new message is added.
+            const lastMessage = messages[messages.length - 1];
+            if (!lastMessage) return;
+
+            // On the initial load (first page of messages), scroll to the bottom.
+            if (messages.length > 0 && messages.length <= 30) {
+                container.scrollTop = container.scrollHeight;
+            }
+            // If the last message is from the current user, scroll to bottom.
+            else if (lastMessage.user_id === user.id) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+    }, [messages, user.id]);
+
+    const handleScroll = useCallback(() => {
+        const container = messageContainerRef.current;
+        if (container && container.scrollTop === 0 && hasMoreMessages && !loading) {
+            // User has scrolled to the top. Store the current scroll height before loading more.
+            scrollHeightBeforeLoadRef.current = container.scrollHeight;
+            onLoadMore();
+        }
+    }, [hasMoreMessages, loading, onLoadMore]);
+
+    useEffect(() => {
+        const container = messageContainerRef.current;
+        if (container) {
+            container.addEventListener('scroll', handleScroll);
+            return () => container.removeEventListener('scroll', handleScroll);
+        }
+    }, [handleScroll]);
+
 
     const handleFileSelect = async (e) => {
         const file = e.target.files[0];
@@ -83,7 +124,8 @@ const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteM
                 </Tooltip>
             </Paper>
 
-            <Box sx={{ flexGrow: 1, p: 2, overflowY: 'auto' }}>
+            <Box ref={messageContainerRef} sx={{ flexGrow: 1, p: 2, overflowY: 'auto' }}>
+                {loading && messages.length === 0 && <CircularProgress />}
                 {messages.map((msg) => (
                     <Message 
                         key={msg.id} 
@@ -93,7 +135,6 @@ const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteM
                         onDeleteMessage={onDeleteMessage}
                     />
                 ))}
-                <div ref={messagesEndRef} />
             </Box>
 
             <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', backgroundColor: 'background.default' }}>
