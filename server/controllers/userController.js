@@ -15,7 +15,7 @@ const generateToken = (user) => {
         theme: user.theme,
         primary_color: user.primary_color
     };
-    return jwt.sign({ user: userPayload }, 'your_jwt_secret', { expiresIn: '1h' });
+    return jwt.sign({ user: userPayload }, process.env.JWT_SECRET, { expiresIn: '1h' });
 };
 
 // @desc    Get all users (for admins to add to projects)

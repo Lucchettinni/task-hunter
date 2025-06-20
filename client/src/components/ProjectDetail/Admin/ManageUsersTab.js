@@ -14,7 +14,6 @@ const ManageUsersTab = ({ projectId }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
     const fetchUsers = useCallback(async () => {
         try {
@@ -117,7 +116,7 @@ const ManageUsersTab = ({ projectId }) => {
                             >
                                 <ListItemAvatar>
                                     <Avatar 
-                                        src={user.profile_image_url ? `${BACKEND_URL}${user.profile_image_url}` : ''}
+                                        src={user.profile_image_url}
                                         sx={{ bgcolor: user.primary_color || (user.role === 'admin' ? 'secondary.main' : 'primary.main') }}
                                     >
                                         {user.username.charAt(0).toUpperCase()}

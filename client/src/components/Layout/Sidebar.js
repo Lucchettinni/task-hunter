@@ -11,7 +11,6 @@ import AuthContext from '../../contexts/AuthContext';
 const Sidebar = ({ onOpenProfile }) => {
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
-    const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
     const handleLogout = () => {
         logout();
@@ -44,7 +43,7 @@ const Sidebar = ({ onOpenProfile }) => {
         }
     };
 
-    const avatarSrc = user?.profile_image_url ? `${BACKEND_URL}${user.profile_image_url}` : '';
+    const avatarSrc = user?.profile_image_url || '';
 
     return (
         <Box

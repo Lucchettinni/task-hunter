@@ -40,19 +40,20 @@ const TeamChat = ({ projectId, onPing }) => {
         }
     }, [projectId]);
 
-    const fetchMessages = useCallback(async (channelId, page) => {
-        setLoadingMessages(true);
-        try {
-            const { data } = await api.get(`/chat/messages/<span class="math-inline">\{channelId\}?page\=</span>{page}&limit=30`);
-            setMessages(prev => (page === 1 ? data.messages : [...data.messages, ...prev]));
-            setHasMoreMessages(data.hasMore);
-            setMessagePage(page + 1);
-        } catch (err) {
-            console.error("Failed to fetch messages", err);
-        } finally {
-            setLoadingMessages(false);
-        }
-    }, []);
+	const fetchMessages = useCallback(async (channelId, page) => {
+		setLoadingMessages(true);
+		try {
+			// Use the correct, existing helper function for paginated messages
+			const { data } = await api.getMessagesPaginated(channelId, page);
+			setMessages(prev => (page === 1 ? data.messages : [...data.messages, ...prev]));
+			setHasMoreMessages(data.hasMore);
+			setMessagePage(page + 1);
+		} catch (err) {
+			console.error("Failed to fetch messages", err);
+		} finally {
+			setLoadingMessages(false);
+		}
+	}, []);
 
     useEffect(() => {
         fetchChannels(true).then((initialData) => {

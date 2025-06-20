@@ -41,14 +41,12 @@ const ProfileModal = ({ open, onClose }) => {
     // Feedback State
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    
-    const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
     useEffect(() => {
         if (user) {
             setName(user.name || '');
             if (user.profile_image_url) {
-                setPreviewUrl(`${BACKEND_URL}${user.profile_image_url}`);
+                setPreviewUrl(user.profile_image_url);
             } else {
                 setPreviewUrl('');
             }
@@ -62,7 +60,7 @@ const ProfileModal = ({ open, onClose }) => {
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
-    }, [user, open, BACKEND_URL]);
+    }, [user, open]);
 
     const handleTabChange = (event, newValue) => {
         setTabIndex(newValue);

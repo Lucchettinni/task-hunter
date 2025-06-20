@@ -1,9 +1,12 @@
 // server/server.js
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const http = require('http');
 const { Server } = require("socket.io");
 const cors = require('cors');
+
 
 const app = express();
 const server = http.createServer(app);
@@ -16,6 +19,9 @@ const io = new Server(server, {
 
 app.use(cors());
 app.use(express.json());
+
+// Serve the static files from the React app
+app.use(express.static(path.join(__dirname, '../client/build')));
 
 // Add io to the request object so it can be accessed in controllers
 app.use((req, res, next) => {
@@ -39,5 +45,5 @@ app.use('/api/chat', require('./routes/chat'));
 // Socket.IO connection
 require('./socket')(io);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 80;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

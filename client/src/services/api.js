@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:5000/api', // Your backend URL
+  baseURL: '/api',
 });
 
 // Interceptor to ADD the token to every request
@@ -31,8 +31,9 @@ axiosInstance.interceptors.response.use(
             // Remove the expired token from local storage
             localStorage.removeItem('token');
 
-            // Redirect the user to the login page.
-            window.location.href = '/login';
+            // Reload the page. The PrivateRoute component will now
+            // correctly redirect to the login page within the React app.
+            window.location.reload(); 
         }
 
         // For all other errors, just reject the promise to let the component handle it

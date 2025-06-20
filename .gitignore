@@ -51,6 +51,10 @@ web_modules/
 # Optional npm cache directory
 .npm
 
+client/build
+server/public
+
+
 # Optional eslint cache
 .eslintcache
 

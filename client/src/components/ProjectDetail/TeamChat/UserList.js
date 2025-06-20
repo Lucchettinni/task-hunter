@@ -3,8 +3,6 @@ import React from 'react';
 import { Box, Typography, List, ListItem, ListItemText, ListItemIcon, Avatar, Badge, Divider, Tooltip } from '@mui/material';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
-const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
 const UserListItem = ({ user }) => {
     const statusColor = {
         online: 'success.main',
@@ -26,7 +24,7 @@ const UserListItem = ({ user }) => {
         return color;
     };
 
-    const avatarSrc = user.profile_image_url ? `${BACKEND_URL}${user.profile_image_url}` : '';
+    const avatarSrc = user.profile_image_url || '';
 
     return (
          <ListItem disablePadding sx={{mb: 1}}>

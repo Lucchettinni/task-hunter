@@ -12,10 +12,8 @@ const isImage = (url) => /\.(jpg|jpeg|png|gif)$/i.test(url);
 const isVideo = (url) => /\.(mp4|webm|ogv|mov)$/i.test(url);
 const isAudio = (url) => /\.(mp3|wav|ogg|aac)$/i.test(url);
 
-const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
 const Attachment = ({ url }) => {
-    const fullUrl = `${BACKEND_URL}${url}`;
+    const fullUrl = url;
     const filename = url.split('/').pop();
 
     if (isImage(url)) {
@@ -63,7 +61,7 @@ const Message = ({ msg, onEditMessage, onDeleteMessage }) => {
     const isOwnMessage = msg.user_id === user.id;
     const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    const avatarSrc = msg.profile_image_url ? `${BACKEND_URL}${msg.profile_image_url}` : '';
+    const avatarSrc = msg.profile_image_url || '';
 
     const handleMenuClick = (event) => {
         setAnchorEl(event.currentTarget);
