@@ -8,7 +8,7 @@ import ChatWindow from './ChatWindow';
 import ChannelList from './ChannelList';
 import UserList from './UserList';
 
-const TeamChat = ({ projectId, onPing }) => { // Add onPing prop
+const TeamChat = ({ projectId, onPing }) => {
     const [currentChannel, setCurrentChannel] = useState(null);
     const [messages, setMessages] = useState([]);
     const [onlineUsers, setOnlineUsers] = useState([]);
@@ -18,11 +18,32 @@ const TeamChat = ({ projectId, onPing }) => { // Add onPing prop
     const { user } = useContext(AuthContext);
 
     const [isUserListOpen, setIsUserListOpen] = useState(true);
+    const [typingUsers, setTypingUsers] = useState([]);
     
+    // State for the channel list, moved up from ChannelList
+    const [categories, setCategories] = useState([]);
+    const [loadingChannels, setLoadingChannels] = useState(true);
+    const [channelError, setChannelError] = useState('');
+
+    const fetchChannels = useCallback(async (showLoader = true) => {
+        if (showLoader) setLoadingChannels(true);
+        try {
+            const { data } = await api.get(`/chat/channels/${projectId}`);
+            setCategories(data);
+            return data;
+        } catch (err) {
+            console.error("Failed to fetch channels", err);
+            setChannelError('Failed to fetch channels.');
+            return null;
+        } finally {
+            if (showLoader) setLoadingChannels(false);
+        }
+    }, [projectId]);
+
     const fetchMessages = useCallback(async (channelId, page) => {
         setLoadingMessages(true);
         try {
-            const { data } = await api.get(`/chat/messages/${channelId}?page=${page}&limit=30`);
+            const { data } = await api.get(`/chat/messages/<span class="math-inline">\{channelId\}?page\=</span>{page}&limit=30`);
             setMessages(prev => (page === 1 ? data.messages : [...data.messages, ...prev]));
             setHasMoreMessages(data.hasMore);
             setMessagePage(page + 1);
@@ -32,6 +53,17 @@ const TeamChat = ({ projectId, onPing }) => { // Add onPing prop
             setLoadingMessages(false);
         }
     }, []);
+
+    useEffect(() => {
+        fetchChannels(true).then((initialData) => {
+            if (initialData && initialData.length > 0) {
+                const firstChannel = initialData.find(c => c.channels && c.channels.length > 0)?.channels[0];
+                if (firstChannel) {
+                    setCurrentChannel(firstChannel);
+                }
+            }
+        });
+    }, [fetchChannels]);
 
     useEffect(() => {
         if (currentChannel) {
@@ -76,18 +108,42 @@ const TeamChat = ({ projectId, onPing }) => { // Add onPing prop
                 setMessages(prev => prev.filter(msg => msg.id !== messageId));
             }
         };
+
         const usersListener = (users) => setOnlineUsers(users);
+
         const pingListener = ({ channelId }) => {
             if (channelId !== currentChannel?.id) {
                 onPing(channelId);
             }
         };
+
+        const typingUpdateListener = ({ channelId, typingUsernames }) => {
+            if (channelId === currentChannel?.id) {
+                setTypingUsers(typingUsernames.filter(username => username !== user.username));
+            }
+        };
         
+        const handleStructureUpdate = () => {
+            fetchChannels(false).then(newCategories => {
+                if (!newCategories) return;
+
+                const currentChannelExists = newCategories.some(cat => cat.channels.some(chan => chan.id === currentChannel?.id));
+
+                if (currentChannel && !currentChannelExists) {
+                    const firstChannel = newCategories.find(c => c.channels && c.channels.length > 0)?.channels[0];
+                    setCurrentChannel(firstChannel || null);
+                }
+            });
+        };
+
         socket.on('receiveMessage', receiveMessageListener);
         socket.on('messageEdited', messageEditedListener);
         socket.on('messageDeleted', messageDeletedListener);
         socket.on('updateOnlineUsers', usersListener);
         socket.on('receivePing', pingListener);
+        socket.on('typingUpdate', typingUpdateListener);
+        socket.on('chat_structure_updated', handleStructureUpdate);
+
 
         return () => {
             socket.off('receiveMessage', receiveMessageListener);
@@ -95,10 +151,12 @@ const TeamChat = ({ projectId, onPing }) => { // Add onPing prop
             socket.off('messageDeleted', messageDeletedListener);
             socket.off('updateOnlineUsers', usersListener);
             socket.off('receivePing', pingListener);
+            socket.off('typingUpdate', typingUpdateListener);
+            socket.off('chat_structure_updated', handleStructureUpdate);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             socket.emit('userInactive');
         };
-    }, [projectId, user, currentChannel, onPing]);
+    }, [projectId, user, currentChannel, onPing, fetchChannels]);
 
     const handleSendMessage = (messageText, attachmentUrl) => {
         const hasText = messageText && messageText.trim() !== '';
@@ -114,7 +172,7 @@ const TeamChat = ({ projectId, onPing }) => { // Add onPing prop
             userId: user.id,
             message: messageText,
             attachment_url: attachmentUrl,
-            mentions: [...new Set(mentions)] // Send unique mentions
+            mentions: [...new Set(mentions)]
         });
     };
     
@@ -139,6 +197,10 @@ const TeamChat = ({ projectId, onPing }) => { // Add onPing prop
                     projectId={projectId}
                     currentChannel={currentChannel}
                     onSelectChannel={setCurrentChannel}
+                    categories={categories}
+                    loading={loadingChannels}
+                    error={channelError}
+                    fetchData={fetchChannels}
                 />
             </Box>
             
@@ -148,6 +210,7 @@ const TeamChat = ({ projectId, onPing }) => { // Add onPing prop
                         key={currentChannel.id}
                         channel={currentChannel}
                         messages={messages}
+                        typingUsers={typingUsers}
                         loading={loadingMessages}
                         onSendMessage={handleSendMessage}
                         onEditMessage={handleEditMessage}
@@ -159,7 +222,7 @@ const TeamChat = ({ projectId, onPing }) => { // Add onPing prop
                     />
                 ) : (
                     <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                         <Alert severity='info'>Select a channel to start chatting.</Alert>
+                         {loadingChannels ? <CircularProgress /> : <Alert severity='info'>Select a channel to start chatting.</Alert>}
                     </Box>
                 )}
             </Box>

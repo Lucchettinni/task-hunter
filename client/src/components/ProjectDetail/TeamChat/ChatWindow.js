@@ -7,6 +7,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import AuthContext from '../../../contexts/AuthContext';
 import Message from './Message';
 import api from '../../../services/api';
+import socket from '../../../services/socket';
 
 const StagedAttachment = ({ file, url, onRemove, isUploading }) => (
     <Chip
@@ -19,7 +20,7 @@ const StagedAttachment = ({ file, url, onRemove, isUploading }) => (
     />
 );
 
-const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteMessage, onToggleUserList, isUserListOpen, hasMoreMessages, onLoadMore, loading }) => {
+const ChatWindow = ({ channel, messages, typingUsers, onSendMessage, onEditMessage, onDeleteMessage, onToggleUserList, isUserListOpen, hasMoreMessages, onLoadMore, loading }) => {
     const { user } = useContext(AuthContext);
     const [newMessage, setNewMessage] = useState('');
     const [stagedAttachment, setStagedAttachment] = useState(null);
@@ -27,6 +28,7 @@ const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteM
     const messageContainerRef = useRef(null);
     const fileInputRef = useRef(null);
     const scrollHeightBeforeLoadRef = useRef(null);
+    const typingTimeoutRef = useRef(null);
 
     useEffect(() => {
         setNewMessage('');
@@ -39,20 +41,15 @@ const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteM
         if (!container) return;
 
         if (scrollHeightBeforeLoadRef.current !== null) {
-            // We have just loaded more messages.
-            // Restore the scroll position to keep the user's view stable.
             container.scrollTop = container.scrollHeight - scrollHeightBeforeLoadRef.current;
-            scrollHeightBeforeLoadRef.current = null; // Reset for the next load.
+            scrollHeightBeforeLoadRef.current = null;
         } else {
-            // This runs on initial load or when a new message is added.
             const lastMessage = messages[messages.length - 1];
             if (!lastMessage) return;
-
-            // On the initial load (first page of messages), scroll to the bottom.
+            
             if (messages.length > 0 && messages.length <= 30) {
                 container.scrollTop = container.scrollHeight;
             }
-            // If the last message is from the current user, scroll to bottom.
             else if (lastMessage.user_id === user.id) {
                 container.scrollTop = container.scrollHeight;
             }
@@ -62,7 +59,6 @@ const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteM
     const handleScroll = useCallback(() => {
         const container = messageContainerRef.current;
         if (container && container.scrollTop === 0 && hasMoreMessages && !loading) {
-            // User has scrolled to the top. Store the current scroll height before loading more.
             scrollHeightBeforeLoadRef.current = container.scrollHeight;
             onLoadMore();
         }
@@ -75,6 +71,23 @@ const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteM
             return () => container.removeEventListener('scroll', handleScroll);
         }
     }, [handleScroll]);
+
+    const handleTyping = (e) => {
+        setNewMessage(e.target.value);
+
+        if (typingTimeoutRef.current === null) {
+            socket.emit('startTyping', { channelId: channel.id });
+        }
+        
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+
+        typingTimeoutRef.current = setTimeout(() => {
+            socket.emit('stopTyping', { channelId: channel.id });
+            typingTimeoutRef.current = null;
+        }, 1500);
+    };
 
 
     const handleFileSelect = async (e) => {
@@ -105,10 +118,24 @@ const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteM
         const hasText = newMessage.trim() !== '';
         const hasAttachment = stagedAttachment && stagedAttachment.url;
         if (hasText || hasAttachment) {
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+            socket.emit('stopTyping', { channelId: channel.id });
+            typingTimeoutRef.current = null;
+
             onSendMessage(newMessage, hasAttachment ? stagedAttachment.url : null);
             setNewMessage('');
             setStagedAttachment(null);
         }
+    };
+
+    const getTypingMessage = () => {
+        const numTypers = typingUsers.length;
+        if (numTypers === 0) return '\u00A0'; // Return a non-breaking space to maintain height
+        if (numTypers === 1) return `${typingUsers[0]} is typing...`;
+        if (numTypers === 2) return `${typingUsers.join(' and ')} are typing...`;
+        return 'Several people are typing...';
     };
 
     const canSend = (newMessage.trim() !== '' || stagedAttachment?.url) && !stagedAttachment?.isUploading;
@@ -137,6 +164,12 @@ const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteM
                 ))}
             </Box>
 
+            <Box sx={{ height: '24px', px: 2, pt: 0.5, boxSizing: 'content-box' }}>
+                <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                    {getTypingMessage()}
+                </Typography>
+            </Box>
+
             <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', backgroundColor: 'background.default' }}>
                 {uploadError && <Alert severity="error" sx={{mb: 1}}>{uploadError}</Alert>}
                 {stagedAttachment && (
@@ -157,7 +190,7 @@ const ChatWindow = ({ channel, messages, onSendMessage, onEditMessage, onDeleteM
                     </IconButton>
                     <TextField
                         fullWidth size="small" variant="outlined" placeholder={`Message #${channel.name}`}
-                        value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
+                        value={newMessage} onChange={handleTyping}
                         autoComplete="off"
                     />
                     <IconButton type="submit" color="primary" disabled={!canSend}>

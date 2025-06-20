@@ -3,6 +3,7 @@ const db = require('../db');
 
 module.exports = function (io) {
     let onlineUsersByProject = {};
+    const typingUsers = {}; // { channelId: { userId: username } }
 
     const getProjectUsers = async (projectId) => {
         if (!onlineUsersByProject[projectId]) {
@@ -43,6 +44,7 @@ module.exports = function (io) {
     io.on('connection', (socket) => {
         let currentProjectId = null;
         let currentUserId = null;
+        let currentUsername = null; 
 
         socket.on('joinProject', async ({ projectId, user }) => {
             if (!user || !user.id) return;
@@ -50,6 +52,7 @@ module.exports = function (io) {
             socket.join(projectId);
             currentProjectId = projectId;
             currentUserId = user.id;
+            currentUsername = user.username; 
 
             if (!onlineUsersByProject[projectId]) {
                 onlineUsersByProject[projectId] = {};
@@ -72,7 +75,46 @@ module.exports = function (io) {
         socket.on('userActive', () => updateUserStatus('online'));
         socket.on('userInactive', () => updateUserStatus('away'));
         
+        // --- Typing Indicator Logic ---
+        socket.on('startTyping', ({ channelId }) => {
+            if (!currentProjectId || !channelId || !currentUserId || !currentUsername) return;
+
+            if (!typingUsers[channelId]) {
+                typingUsers[channelId] = {};
+            }
+            typingUsers[channelId][currentUserId] = currentUsername;
+
+            // Broadcast to other users in the same channel
+            socket.to(currentProjectId).emit('typingUpdate', {
+                channelId,
+                typingUsernames: Object.values(typingUsers[channelId])
+            });
+        });
+
+        socket.on('stopTyping', ({ channelId }) => {
+            if (!currentProjectId || !channelId || !currentUserId) return;
+            
+            if (typingUsers[channelId]) {
+                delete typingUsers[channelId][currentUserId];
+                // Broadcast the change
+                 socket.to(currentProjectId).emit('typingUpdate', {
+                    channelId,
+                    typingUsernames: Object.values(typingUsers[channelId])
+                });
+            }
+        });
+
         socket.on('sendMessage', async (data) => {
+            // --- Clear typing status on message send ---
+            if (typingUsers[data.channelId] && typingUsers[data.channelId][data.userId]) {
+                delete typingUsers[data.channelId][data.userId];
+                socket.to(data.projectId).emit('typingUpdate', {
+                    channelId: data.channelId,
+                    typingUsernames: Object.values(typingUsers[data.channelId])
+                });
+            }
+            // --- End typing status logic ---
+
             const { projectId, channelId, userId, message, attachment_url, mentions } = data;
             try {
                 const [result] = await db.query(
@@ -159,6 +201,19 @@ module.exports = function (io) {
         });
         
         socket.on('disconnect', () => {
+            // --- Clear typing status on disconnect ---
+            if (currentProjectId && currentUserId) {
+                Object.keys(typingUsers).forEach(channelId => {
+                    if (typingUsers[channelId] && typingUsers[channelId][currentUserId]) {
+                        delete typingUsers[channelId][currentUserId];
+                         socket.to(currentProjectId).emit('typingUpdate', {
+                            channelId,
+                            typingUsernames: Object.values(typingUsers[channelId])
+                        });
+                    }
+                });
+            }
+            // --- End typing status logic ---
             if (currentProjectId && currentUserId) {
                 updateUserStatus('offline');
             }
