@@ -14,6 +14,7 @@ const ManageUsersTab = ({ projectId }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
     const fetchUsers = useCallback(async () => {
         try {
@@ -23,7 +24,6 @@ const ManageUsersTab = ({ projectId }) => {
                 api.get(`/projects/${projectId}/users`)
             ]);
             
-            // Filter out users already in the project from the "add" list
             const projectUserIds = new Set(projectUsersRes.data.map(u => u.id));
             setAllUsers(allUsersRes.data.filter(u => !projectUserIds.has(u.id)));
             
@@ -50,7 +50,7 @@ const ManageUsersTab = ({ projectId }) => {
             await api.post(`/projects/${projectId}/users`, { userId: selectedUser.id });
             setSuccess(`Successfully added ${selectedUser.username} to the project.`);
             setSelectedUser(null);
-            fetchUsers(); // Refresh both lists
+            fetchUsers();
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to add user.');
         }
@@ -61,7 +61,7 @@ const ManageUsersTab = ({ projectId }) => {
             try {
                 await api.delete(`/projects/${projectId}/users/${userId}`);
                 setSuccess(`Successfully removed ${username}.`);
-                fetchUsers(); // Refresh both lists
+                fetchUsers();
             } catch (err) {
                 setError(err.response?.data?.message || 'Failed to remove user.');
             }
@@ -116,12 +116,9 @@ const ManageUsersTab = ({ projectId }) => {
                                 }
                             >
                                 <ListItemAvatar>
-                                    {/* MODIFICATION: 
-                                        Add the `src` prop to the Avatar to display the profile image.
-                                    */}
                                     <Avatar 
-                                        src={user.profile_image_url || ''}
-                                        sx={{  bgcolor: user.primary_color || (user.role === 'admin' ? 'secondary.main' : 'primary.main') }}
+                                        src={user.profile_image_url ? `${BACKEND_URL}${user.profile_image_url}` : ''}
+                                        sx={{ bgcolor: user.primary_color || (user.role === 'admin' ? 'secondary.main' : 'primary.main') }}
                                     >
                                         {user.username.charAt(0).toUpperCase()}
                                     </Avatar>

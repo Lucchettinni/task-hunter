@@ -23,7 +23,6 @@ const SignUp = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [profileImageUrl, setProfileImageUrl] = useState('');
     const [error, setError] = useState('');
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -36,12 +35,12 @@ const SignUp = () => {
         }
         setError('');
         try {
+            // profile_image_url is no longer sent on signup
             const res = await api.post('/auth/signup', { 
                 username, 
                 password,
                 name,
                 email,
-                profile_image_url: profileImageUrl 
             });
             login(res.data.token);
             navigate('/');
@@ -63,7 +62,6 @@ const SignUp = () => {
                 py: 4
             }}
         >
-            {/* Background decorative elements */}
             <Box
                 sx={{
                     position: 'absolute',

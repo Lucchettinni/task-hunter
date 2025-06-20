@@ -1,7 +1,7 @@
 // server/controllers/userController.js
 const db = require('../db');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken'); // Import jwt
+const jwt = require('jsonwebtoken');
 
 // Helper to generate token with a full user payload
 const generateToken = (user) => {
@@ -65,25 +65,38 @@ exports.updateTheme = async (req, res) => {
 // @route   PUT /api/users/profile
 // @access  Private
 exports.updateProfile = async (req, res) => {
-    const { name, profile_image_url } = req.body;
+    // The name comes from the form body
+    const { name } = req.body;
     const userId = req.user.id;
+    
+    // Get the existing user data to have a fallback for the image URL
+    const [existingUsers] = await db.query('SELECT profile_image_url FROM users WHERE id = ?', [userId]);
+    if (existingUsers.length === 0) {
+        return res.status(404).json({ message: 'User not found.' });
+    }
+    
+    // Start with the existing URL
+    let profile_image_url = existingUsers[0].profile_image_url; 
+    
+    // If a new file was uploaded by multer, update the URL to the new path.
+    if (req.file) {
+        profile_image_url = `/uploads/profile-pictures/${req.file.filename}`;
+    }
+
     try {
-        await db.query('UPDATE users SET name = ?, profile_image_url = ? WHERE id = ?', [name, profile_image_url || null, userId]);
+        await db.query('UPDATE users SET name = ?, profile_image_url = ? WHERE id = ?', [name, profile_image_url, userId]);
         
-        // Fetch the updated user to create a new token
+        // Fetch the fully updated user record
         const [users] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
-        if (users.length === 0) {
-            return res.status(404).json({ message: 'User not found after update.' });
-        }
         const updatedUser = users[0];
 
-        // Generate a new token with updated info
+        // Generate a new JWT with the updated user details
         const token = generateToken(updatedUser);
 
         res.json({ 
             message: 'Profile updated successfully',
-            token: token, // Send the new token back
-            user: updatedUser // Send the updated user object back
+            token: token,
+            user: updatedUser
         });
     } catch (err) {
         console.error(err.message);

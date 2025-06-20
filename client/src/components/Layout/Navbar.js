@@ -7,14 +7,15 @@ import AuthContext from '../../contexts/AuthContext';
 const Navbar = ({ onOpenProfile }) => {
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
+    const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
     const handleLogout = () => {
         logout();
         navigate('/login');
     };
     
-    // Function to generate a color from a string for the avatar background
     const stringToColor = (string) => {
+        if (!string) return '#000000';
         let hash = 0;
         for (let i = 0; i < string.length; i += 1) {
             hash = string.charCodeAt(i) + ((hash << 5) - hash);
@@ -26,6 +27,9 @@ const Navbar = ({ onOpenProfile }) => {
         }
         return color;
     }
+    
+    // Construct the full URL if profile_image_url is a path
+    const avatarSrc = user?.profile_image_url ? `${BACKEND_URL}${user.profile_image_url}` : '';
 
     return (
         <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
@@ -41,8 +45,7 @@ const Navbar = ({ onOpenProfile }) => {
                         </Typography>
                         <Tooltip title="Profile & Settings">
                              <IconButton onClick={onOpenProfile} sx={{ p: 0 }}>
-                                <Avatar alt={user.name} src={user.profile_image_url} sx={{ bgcolor: stringToColor(user.name || '') }}>
-                                    {/* Avatar component automatically shows the first letter if src is invalid/missing */}
+                                <Avatar alt={user.name} src={avatarSrc} sx={{ bgcolor: stringToColor(user.name || '') }}>
                                     {user.name ? user.name.charAt(0).toUpperCase() : ''}
                                 </Avatar>
                             </IconButton>

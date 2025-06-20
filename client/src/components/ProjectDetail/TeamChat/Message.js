@@ -26,7 +26,6 @@ const Attachment = ({ url }) => {
         );
     }
     
-    // FIX: Add video player rendering
     if (isVideo(url)) {
         return (
             <video controls src={fullUrl} style={{ maxWidth: '300px', maxHeight: '250px', borderRadius: '12px', marginTop: '8px' }}>
@@ -35,7 +34,6 @@ const Attachment = ({ url }) => {
         );
     }
 
-    // FIX: Add audio player rendering
     if (isAudio(url)) {
         return (
             <audio controls src={fullUrl} style={{ width: '300px', marginTop: '8px' }}>
@@ -64,6 +62,8 @@ const Message = ({ msg, onEditMessage, onDeleteMessage }) => {
 
     const isOwnMessage = msg.user_id === user.id;
     const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const avatarSrc = msg.profile_image_url ? `${BACKEND_URL}${msg.profile_image_url}` : '';
 
     const handleMenuClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -111,7 +111,7 @@ const Message = ({ msg, onEditMessage, onDeleteMessage }) => {
                 }
             }
         }}>
-            <Avatar src={msg.profile_image_url || ''} sx={{ bgcolor: msg.primary_color || 'primary.main', width: 40, height: 40, mt: 0.5 }}>
+            <Avatar src={avatarSrc} sx={{ bgcolor: msg.primary_color || 'primary.main', width: 40, height: 40, mt: 0.5 }}>
                 {msg.username.charAt(0).toUpperCase()}
             </Avatar>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexGrow: 1 }}>

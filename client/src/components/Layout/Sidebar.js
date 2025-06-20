@@ -5,12 +5,13 @@ import { Box, Typography, Button, Avatar, Paper, List, ListItem, ListItemButton,
 import FolderIcon from '@mui/icons-material/Folder';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
-import AdjustIcon from '@mui/icons-material/Adjust'; // Placeholder for logo
+import AdjustIcon from '@mui/icons-material/Adjust';
 import AuthContext from '../../contexts/AuthContext';
 
 const Sidebar = ({ onOpenProfile }) => {
     const { user, logout } = useContext(AuthContext);
     const navigate = useNavigate();
+    const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
     const handleLogout = () => {
         logout();
@@ -18,7 +19,7 @@ const Sidebar = ({ onOpenProfile }) => {
     };
 
     const navItemStyles = {
-        padding: '0.75rem 1rem', // Adjusted padding
+        padding: '0.75rem 1rem',
         marginBottom: '0.5rem',
         borderRadius: '12px',
         color: 'text.secondary',
@@ -42,6 +43,8 @@ const Sidebar = ({ onOpenProfile }) => {
             },
         }
     };
+
+    const avatarSrc = user?.profile_image_url ? `${BACKEND_URL}${user.profile_image_url}` : '';
 
     return (
         <Box
@@ -72,7 +75,7 @@ const Sidebar = ({ onOpenProfile }) => {
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, mb: 2, backgroundColor: 'action.hover', borderRadius: 3 }}>
                 <Avatar 
-                    src={user?.profile_image_url || ''} 
+                    src={avatarSrc} 
                     alt={user?.name || ''}
                     sx={{ width: 48, height: 48, bgcolor: 'primary.main' }}
                 >

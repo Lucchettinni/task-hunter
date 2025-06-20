@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import {
     Modal, Box, Typography, TextField, Button, Paper, Alert,
-    Tabs, Tab, Avatar, InputAdornment, ToggleButtonGroup, ToggleButton
+    Tabs, Tab, Avatar, ToggleButtonGroup, ToggleButton
 } from '@mui/material';
 import api from '../../services/api';
 import AuthContext from '../../contexts/AuthContext';
@@ -20,33 +20,49 @@ const modalStyle = {
 };
 
 const ProfileModal = ({ open, onClose }) => {
-    const { user, login } = useContext(AuthContext); // Use login to update the token
+    const { user, login } = useContext(AuthContext);
     const { setThemeName, setPrimaryColor } = useThemeContext();
     const [tabIndex, setTabIndex] = useState(0);
 
-    const [name, setName] = useState(user?.name || '');
-    const [profileImageUrl, setProfileImageUrl] = useState(user?.profile_image_url || '');
+    // Profile Tab State
+    const [name, setName] = useState('');
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState('');
+
+    // Appearance Tab State
+    const [selectedTheme, setSelectedTheme] = useState('dark');
+    const [selectedColor, setSelectedColor] = useState('#90caf9');
+
+    // Password Tab State
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-
-    const [selectedTheme, setSelectedTheme] = useState(user?.theme || 'dark');
-    const [selectedColor, setSelectedColor] = useState(user?.primary_color || '#90caf9');
     
+    // Feedback State
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    
+    const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
     useEffect(() => {
         if (user) {
             setName(user.name || '');
-            setProfileImageUrl(user.profile_image_url || '');
+            if (user.profile_image_url) {
+                setPreviewUrl(`${BACKEND_URL}${user.profile_image_url}`);
+            } else {
+                setPreviewUrl('');
+            }
             setSelectedTheme(user.theme || 'dark');
             setSelectedColor(user.primary_color || (user.theme === 'light' ? '#1976d2' : '#90caf9'));
         }
-        // Reset feedback messages when modal opens or user changes
+        // Reset state on modal open
         setError('');
         setSuccess('');
-    }, [user, open]);
+        setSelectedFile(null);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+    }, [user, open, BACKEND_URL]);
 
     const handleTabChange = (event, newValue) => {
         setTabIndex(newValue);
@@ -54,16 +70,39 @@ const ProfileModal = ({ open, onClose }) => {
         setSuccess('');
     };
 
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 10000000) { // 10MB check
+                setError("File is too large. Maximum size is 10MB.");
+                return;
+            }
+            setSelectedFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
+    };
+
     const handleProfileUpdate = async (e) => {
         e.preventDefault();
         setError('');
         setSuccess('');
+        
+        const formData = new FormData();
+        formData.append('name', name);
+        if (selectedFile) {
+            formData.append('profileImage', selectedFile);
+        }
+
         try {
-            const { data } = await api.updateUserProfile({ name, profile_image_url: profileImageUrl });
+            const { data } = await api.put('/users/profile', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
             if (data.token) {
-                login(data.token); // Re-login with the new token to update context
+                login(data.token);
             }
             setSuccess('Profile updated successfully!');
+            setSelectedFile(null);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to update profile.');
         }
@@ -95,7 +134,7 @@ const ProfileModal = ({ open, onClose }) => {
         try {
             const { data } = await api.updateUserTheme({ theme: selectedTheme, primary_color: selectedColor });
             if (data.token) {
-                login(data.token); // Re-login with the new token to update context
+                login(data.token);
             }
             setThemeName(selectedTheme);
             setPrimaryColor(selectedColor);
@@ -122,7 +161,7 @@ const ProfileModal = ({ open, onClose }) => {
                         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
                         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
                         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, position: 'relative' }}>
-                            <Avatar src={profileImageUrl || ''} sx={{ width: 100, height: 100, fontSize: '2.5rem' }}>
+                            <Avatar src={previewUrl} sx={{ width: 100, height: 100, fontSize: '2.5rem' }}>
                                 {(name || ' ').charAt(0).toUpperCase()}
                             </Avatar>
                         </Box>
@@ -130,10 +169,11 @@ const ProfileModal = ({ open, onClose }) => {
                             fullWidth margin="normal" label="Name"
                             value={name} onChange={(e) => setName(e.target.value)}
                         />
-                        <TextField
-                            fullWidth margin="normal" label="Profile Image URL"
-                            value={profileImageUrl} onChange={(e) => setProfileImageUrl(e.target.value)}
-                        />
+                         <Button variant="outlined" component="label" fullWidth sx={{ mt: 1 }}>
+                            Upload New Image
+                            <input type="file" hidden accept="image/jpeg,image/png,image/gif" onChange={handleFileChange} />
+                        </Button>
+                        {selectedFile && <Typography variant="caption" display="block" sx={{mt: 1, textAlign: 'center'}}>Selected: {selectedFile.name}</Typography>}
                         <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>Save Changes</Button>
                     </Box>
                 )}
@@ -173,7 +213,6 @@ const ProfileModal = ({ open, onClose }) => {
                                 />
                             </Box>
                         </Box>
-
                          <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>Save Theme</Button>
                     </Box>
                 )}

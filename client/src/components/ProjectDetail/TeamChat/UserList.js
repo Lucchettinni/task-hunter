@@ -1,8 +1,9 @@
 // client/src/components/ProjectDetail/TeamChat/UserList.js
 import React from 'react';
 import { Box, Typography, List, ListItem, ListItemText, ListItemIcon, Avatar, Badge, Divider, Tooltip } from '@mui/material';
-import CircleIcon from '@mui/icons-material/Circle';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+
+const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const UserListItem = ({ user }) => {
     const statusColor = {
@@ -12,6 +13,7 @@ const UserListItem = ({ user }) => {
     };
 
     const stringToColor = (string) => {
+        if (!string) return '#000000';
         let hash = 0;
         for (let i = 0; i < string.length; i += 1) {
             hash = string.charCodeAt(i) + ((hash << 5) - hash);
@@ -24,15 +26,7 @@ const UserListItem = ({ user }) => {
         return color;
     };
 
-    const stringAvatar = (name) => ({
-        sx: {
-            bgcolor: user.primary_color || stringToColor(name || 'User'),
-            width: 32,
-            height: 32,
-            fontSize: '0.875rem'
-        },
-        children: `${(name || 'U').charAt(0).toUpperCase()}`,
-    });
+    const avatarSrc = user.profile_image_url ? `${BACKEND_URL}${user.profile_image_url}` : '';
 
     return (
          <ListItem disablePadding sx={{mb: 1}}>
@@ -64,7 +58,17 @@ const UserListItem = ({ user }) => {
                         },
                       }}
                  >
-                    <Avatar src={user.profile_image_url || ''} {...stringAvatar(user.username)} />
+                    <Avatar 
+                        src={avatarSrc} 
+                        sx={{  
+                            bgcolor: user.primary_color || stringToColor(user.username || 'User'),
+                            width: 32,
+                            height: 32,
+                            fontSize: '0.875rem'
+                        }}
+                    >
+                        {(user.username || 'U').charAt(0).toUpperCase()}
+                    </Avatar>
                  </Badge>
              </ListItemIcon>
             <ListItemText 
@@ -86,10 +90,15 @@ const UserListItem = ({ user }) => {
 
 const UserList = ({ users }) => {
     
-    // Sort users by status: online > away > offline
+    // Sort users by status: online > away > offline, then alphabetically
     const sortedUsers = [...users].sort((a, b) => {
         const statusOrder = { online: 0, away: 1, offline: 2 };
-        return (statusOrder[a.status] || 2) - (statusOrder[b.status] || 2);
+        const statusA = statusOrder[a.status] || 2;
+        const statusB = statusOrder[b.status] || 2;
+        if (statusA !== statusB) {
+            return statusA - statusB;
+        }
+        return a.username.localeCompare(b.username);
     });
     
     const admins = sortedUsers.filter(u => u.role === 'admin');
