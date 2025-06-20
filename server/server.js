@@ -17,12 +17,14 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-// FIX: Explicitly serve the uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+// Add io to the request object so it can be accessed in controllers
+app.use((req, res, next) => {
+    req.io = io;
+    next();
+});
 
-// Note: If you still want to serve other things from 'public' (like a favicon),
-// you can keep the original line as well, but the one above is more specific
-// for the uploads and solves the routing problem.
+// Serve static assets from the 'public' directory
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 
